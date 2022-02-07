@@ -82,24 +82,24 @@ and adds this new coord weighted by change in action.
 MultiThreaded"""
 function MetroSwipeMT(n_tau, m, ω, h, idrate, rng, Path)
     accept = 0
-    @threads for i = 1:2:n_tau
+    Threads.@threads for i = 1:2:n_tau
         x_new = Path[i] + h*2*(rand(rng)-1/2)
         s_old = HO_Action(n_tau, m, ω, Path, i, Path[i])
         s_new = HO_Action(n_tau, m, ω, Path, i, x_new)
         # printf("s_old: %f, s_new: %f\n", s_old, s_new)
         if rand(rng) < exp(s_old-s_new)
             Path[i] = x_new
-            accept += 1/n_tau
+            Threads.atomic_add!(accept,1/n_tau)
         end
     end
-    @threads for i = 2:2:n_tau
+    Threads.@threads for i = 2:2:n_tau
         x_new = Path[i] + h*2*(rand(rng)-1/2)
         s_old = HO_Action(n_tau, m, ω, Path, i, Path[i])
         s_new = HO_Action(n_tau, m, ω, Path, i, x_new)
         # printf("s_old: %f, s_new: %f\n", s_old, s_new)
         if rand(rng) < exp(s_old-s_new)
             Path[i] = x_new
-            accept += 1/n_tau
+            Threads.atomic_add!(accept,1/n_tau)
         end
     end
     # rand!(gaussianD, Path)
@@ -150,7 +150,7 @@ function SimMetro(n_tau,meanfname,obsfname)
     b = @timed for i = 1:n_total-n_burn
         Path, accept, h = MetroSwipeMT(n_tau, m, ω, h, idrate, rng, Path)
         if n_skip == 0 || (i-1-n_burn)%n_skip == 0
-            MeasureObs(n_tau, sum1, sum2, sum3, Path)
+            sum1, sum2, sum3 = MeasureObs(n_tau, sum1, sum2, sum3, Path)
             append!(Randlist,h)
             itt += 1
             # println("Measured ",itt)
@@ -356,7 +356,7 @@ sum2 = zeros(n_tau)
 sum3 = zeros(n_tau)
 runtotal = 40
 for i=1:runtotal
-    main("expfull$(i).csv","measuredObs$(i).csv")
+    main(n_tau,"expfull$(i).csv","measuredObs$(i).csv")
     Path = zeros(n_tau)
     println("Simulations run: (",i,"/",runtotal,")")
     # show(IOContext(stdout, :limit => true),"text/plain",Path)
