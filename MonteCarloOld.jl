@@ -10,26 +10,47 @@ begin
     using FFTW
     using StatsBase
     using Base.Threads
-
+    using BenchmarkTools
+    
     # using Printf
     # using DataFrames
     # using CSV
-
+    
     const obsf = "results/measuredObs.csv"
     const meanf = "results/expfull.csv"
-
+    
+    # n_tau, m, ω
+    # expected_x2 = Exp_x2(n_tau, m, ω)
     rng = MersenneTwister(11111)
     gaussianD = Normal(0.16, 1.5)
     # n=rand(d,1000)
 end
 
 
+### Probability density diagram ###
+function PlotProbDD(file)
+    arr1 = Vector{Float64}(undef,0)
+    for i=2:Int((length(LastRowFromFile(file))-1)/3)+1
+        append!(arr1,GetColumn(i,file))
+    end
+    histogram(arr1,bins=[i for i=floor(minimum(arr1)*10)/10:0.1:(floor(maximum(arr1)*10)+1)/10],normed=true)#,weights=repeat([1/length(arr1)],length(arr1))
+end
+
+function PlotProbDDe(m,ω,ħ)
+    println("m = ",m,", ω = ",ω,", ħ = ",ħ)
+    plot!([x for x=-2:0.01:2],[((m*ω/(π*ħ))^(1/4)*exp(-m*ω*x^2/(2*ħ)))^2 for x=-2:0.01:2],linewidth=2)
+end
+
+begin
+    PlotProbDD("results/measuredObsb.csv")
+    PlotProbDDe(m,ω,1)
+end
+
+
 # TODO:
-# Fixed AutoCorrelation ?
+# VIII. SUGGESTED PROBLEMS
+    # b, c, d, e, f, g
 
-
-n_tau, m, ω
-expected_x2 = Exp_x2(n_tau, m, ω)
 
 
 #                                   #
@@ -51,6 +72,18 @@ function MeasureObs(n_tau, sum1, sum2, sum3, Path)
     end
     return sum1, sum2, sum3
 end
+
+"""Append the mean of exp_x, exp_x2, exp_x0x1 on one line to a file  
+"""
+function writeeMean(path,filename,exp_x,exp_x2,exp_x0x1,itt)
+    open(string(path,filename),"a") do file
+        write(file,string(Int64(itt),","))
+        write(file,string(mean(exp_x),","))
+        write(file,string(mean(exp_x2),","))
+        write(file,string(mean(exp_x0x1),"\n"))
+    end
+end
+
 
 
 #                               #
@@ -118,7 +151,7 @@ end
 #                               #
 function SimMetro(n_tau,meanfname,obsfname)
     Path = zeros(n_tau)
-    sum1 = zeros(n_tau); sum2 = zeros(n_tau); sum3 = zeros(n_tau);
+    sum1 = zeros(n_tau); sum2 = zeros(n_tau); sum3 = zeros(n_tau)
     exp_x, exp_x2, exp_x0x1 = zeros(n_tau), zeros(n_tau), zeros(n_tau)
     # sum1, sum2, sum3 = zeros(n_tau), zeros(n_tau), zeros(n_tau)
     n_burn = 200
@@ -143,12 +176,12 @@ function SimMetro(n_tau,meanfname,obsfname)
     #                                                       #
     a = @timed if n_burn != 0
         for i = 1:n_burn
-            Path, accept, h = MetroSwipeMT(n_tau, m, ω, h, idrate, rng, Path)
+            Path, accept, h = MetroSwipe(n_tau, m, ω, h, idrate, rng, Path)
         end
     end
     println("Burn-in $(n_burn) complete!")
     b = @timed for i = 1:n_total-n_burn
-        Path, accept, h = MetroSwipeMT(n_tau, m, ω, h, idrate, rng, Path)
+        Path, accept, h = MetroSwipe(n_tau, m, ω, h, idrate, rng, Path)
         if n_skip == 0 || (i-1-n_burn)%n_skip == 0
             sum1, sum2, sum3 = MeasureObs(n_tau, sum1, sum2, sum3, Path)
             append!(Randlist,h)
@@ -168,17 +201,19 @@ function SimMetro(n_tau,meanfname,obsfname)
 end
 
 
-function main(n_tau,meanfname,obsfname)
+function main(n_tau,meanfname,obsfname,expfname,m,ω)
     # Logic of program should go here
     # We want to print final expectation values
     # rng = MersenneTwister(11111)
+    n_tau = Int(n_tau)
+    println("n_tau = ",n_tau,", m,ω = ", m,", ",ω)
     Path = zeros(n_tau)
-    sum1 = zeros(n_tau); sum2 = zeros(n_tau); sum3 = zeros(n_tau)
+    # sum1 = zeros(n_tau); sum2 = zeros(n_tau); sum3 = zeros(n_tau)
     exp_x, exp_x2, exp_x0x1 = zeros(n_tau), zeros(n_tau), zeros(n_tau)
-    # sum1, sum2, sum3 = zeros(n_tau), zeros(n_tau), zeros(n_tau)
-    n_burn = 200
-    n_skip = 20
-    n_total = n_burn + 1 + (n_skip+1)*10000#20000#200100
+    sum1, sum2, sum3 = zeros(n_tau), zeros(n_tau), zeros(n_tau)
+    n_burn = 100
+    n_skip = n_tau/10#12
+    n_total = n_burn + 1 + (n_skip)*10000#20000#200100
     accept = 0
     idrate = 0.8
     h = 1
@@ -188,7 +223,7 @@ function main(n_tau,meanfname,obsfname)
     rfold = "results/"
     touch(string(rfold,meanfname))
     touch(string(rfold,obsfname))
-    # touch(string(rfold,"sum3exp3.csv"))
+    touch(string(rfold,expfname))
 
     # show(IOContext(stdout, :limit => true),"text/plain",Path)
     # println()
@@ -214,15 +249,17 @@ function main(n_tau,meanfname,obsfname)
                 # print("<x_1*x_i> "); printarray(exp_x0x1)
                 
                 # exp1, exp2, exp3      // Append each itt
-                writee123tofile(n_tau,rfold,meanfname, exp_x, exp_x2, exp_x0x1, itt)
+                # writee123tofile(n_tau,rfold,meanfname, exp_x, exp_x2, exp_x0x1, itt)
                 # curr1, curr2, curr3   // Append each itt
-                writec123tofile(rfold,obsfname, Path, itt)
+                # writec123tofile(rfold,obsfname, Path, itt)
                 # curr3, sum3           // New file
                 #filenamec3s3 = string("curr3sum3n",Int64(itt),".csv")
                 #writec3s3tofile(rfold,filenamec3s3, sum3)
                 # sum3, exp3            // New file
                 #filenames3e3 = string("sum3exp3n",Int64(itt),".csv")
                 #writes3e3tofile(rfold,filenames3e3, sum3, exp_x0x1)
+                # ⟨exp1⟩, ⟨exp2⟩, ⟨exp3⟩  // Append each itt
+                writeeMean(rfold,expfname,exp_x,exp_x2,exp_x0x1,itt)
             end
         end
     end
@@ -233,25 +270,31 @@ function main(n_tau,meanfname,obsfname)
     return a.time
 end
 
+configs1 = [1 120; 0.8 150; 0.6 200; 0.5 240; 0.3 400; 0.2 600; 0.1 1200; 0.08 1500; 0.06 2000; 0.05 2400; 0.03 4000; 0.02 6000; 0.01 12000]
+# configs1[1,2]
+
+for i=1:length(configs1[:,1])
+    m = configs1[i,1]
+    n_tau = configs1[i,2]
+    main(n_tau,"expfulla$(i).csv","measuredObsa$(i).csv","expectationvala$(i).csv",m,m)
+end
 
 
-mainT = zeros(Float64,0)
-SimT = zeros(Float64,0)
-for n_tau = 2:120
-    println(n_tau)
-    # main()
-    append!(mainT,main(n_tau,"expfullA14.csv","measuredObsA14.csv"))
-    # $ rm -v *.csv
-    append!(SimT,SimMetro(n_tau,"expfullA13.csv","measuredObsA13.csv"))
+begin
+    plot(GetColumn(2,"results/expectationvala5.csv"))    # ⟨x̂⟩
+    hline!([0])
 end
-plot([(i,mainT[i-1]) for i=2:length(mainT)], ylabel="time (s)", xlabel="n_tau")
-mainT
-SimT
-for i=1:Int(length(SimT)/2)
-    SimT[i] = SimT[2*i] + SimT[2*i-1]
+begin
+    plot(GetColumn(3,"results/expectationvala2.csv"))# ⟨x̂²⟩
+    expected_x2 = Exp_x2(12000, 0.01, 0.01)
+    hline!([expected_x2])
 end
-ab=[(SimT[Int(2*i)] + SimT[Int(2*i-1)]) for i=1:(length(SimT)/2)]
-plot!([(i,ab[i-1]) for i=2:length(ab)])
+expected_x4 = 3*Exp_x2(120, m, ω)^2
+
+begin
+    PlotProbDD("results/measuredObsb.csv")
+    PlotProbDDe(m,ω,1)
+end
 
 LastRowFromFile("results/measuredObsA14.csv")
 LastRowFromFile("results/measuredObsA13.csv")
@@ -264,30 +307,7 @@ plot!(LastRowFromFile("results/expfullA13.csv")[2:120+1])
     writec123tofile("Benchmarks/","old.csv",[i for i=1:1000],i)
 end
 
-function WritePathToFile(path, filename, Path, itt)
-    row = [itt]
-    # Path = repr.(Path)
-    println(skipchars(isspace,strip(repr(Path),['[',']'])))
-    for i=1:length(Path)
-        append!(row,[","*repr(Path[i])])
-    end
-    for i=1:length(Path)
-        append!(row,[","*repr(Path[i]^2)])
-    end
-    for i=1:length(Path)
-        append!(row,[","*repr(Path[i]*Path[1])])
-    end
-    append!(row,["\n"])
-    # row = row + Path[length(Path)]
-    show(row)
-    open(string(path, filename),"a") do file
-        write(file,row)
-    end
-end
 
-@time for i=1:10000
-    WritePathToFile("Benchmarks/","new.csv",[i for i=1:16],i)
-end
 
 
 
