@@ -281,12 +281,13 @@ end
 
 
 begin
-    plot(GetColumn(2,"results/expectationvala5.csv"))    # ⟨x̂⟩
+    num1 = 13
+    plot(GetColumn(2,"results/expectationvala$(num1).csv"))    # ⟨x̂⟩
     hline!([0])
 end
 begin
-    plot(GetColumn(3,"results/expectationvala2.csv"))# ⟨x̂²⟩
-    expected_x2 = Exp_x2(12000, 0.01, 0.01)
+    plot(GetColumn(3,"results/expectationvala$(num1).csv"))# ⟨x̂²⟩
+    expected_x2 = Exp_x2(configs1[num1,2], configs1[num1,1], configs1[num1,1])
     hline!([expected_x2])
 end
 expected_x4 = 3*Exp_x2(120, m, ω)^2
