@@ -287,6 +287,45 @@ function main(n_tau,meanfname,obsfname,expfname,m,ω)
     return a.time
 end
 
+function Err1(array1)
+    return [mean(array1), √(var(array1)/length(array1))]
+end
+@benchmark Err1([5,6,1,2,3])
+
+function TwoPointC(data1)
+    array1 = []
+    if typeof(data1) == Array{Float64}
+        for i in data1
+            push!(array1,Err1(i))
+        end
+    elseif typeof(data1) == Matrix{Float64}
+        array1 = Matrix{Float64}(undef,length(data1[1,:]),2)
+        for i = 1:length(data1[1,:])
+            array1[i,:] = Err1(data1[:,i])
+        end
+    end
+    return array1
+end
+# evalfile("MetropolisUpdate.jl")
+GetColumn(2:3,"results/measuredObsB1.csv")
+
+function GetTwoPointData(filename)
+    ind = div(length(LastRowFromFile(filename))-1,4)
+    return GetColumn((3*ind+2:4*ind+1),filename)#,ind,(3*ind:4*ind+1)
+end
+
+twopointD = GetTwoPointData("results/measuredObsB1.csv")
+t2 = TwoPointC(twopointD)
+plot(t2[:,1],yerr=t2[:,2])
+
+GetTwoPointData("t3st.csv")
+
+ab1 = Matrix{Float64}(undef,2,3)
+a1 = Vector{Float64}(undef,3)
+a1[1],a1[2],a1[3]=1,2,3
+ab1[2,:] = a1
+ab1[1,1] = 1
+ab1
 configs1 = [1 120; 0.8 150; 0.6 200; 0.5 240; 0.3 400; 0.2 600; 0.1 1200; 0.08 1500; 0.06 2000; 0.05 2400; 0.03 4000; 0.02 6000; 0.01 12000]
 # configs1[1,2]
 main(120,"expfullB1.csv","measuredObsB1.csv","expectationvalB1.csv",1,1)

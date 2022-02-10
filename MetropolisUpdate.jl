@@ -52,16 +52,27 @@ function Exp_x2(n_tau, m, ω)
     return exp_x2
 end
 
-"""Retunrs column of file delimited by ","
+"""Returns column(s) of file delimited by ","
 """
 function GetColumn(col,filename)
-    al = Vector{Float64}(undef,0)
-    for r = readlines(filename)
-        push!(al,parse.(Float64,split(r,",")[col]))
+    if length(col) == 1
+        al = Vector{Float64}(undef,0)
+        for c = col
+            for r = readlines(filename)
+                push!(al,parse.(Float64,split(r,",")[c]))
+            end
+        end
+        return al
     end
-    return al
+    all1 = Matrix{Float64}(undef,countlines(filename),length(col))
+    r1 = 1
+    for r = readlines(filename)
+        all1[r1,:] = parse.(Float64,split(r,",")[col])
+        r1 += 1
+    end
+    return all1
 end
-
+# nrow()
 """Returns AutoCorrelation of arrayC
 """
 function AutoCorrR(arrayC)
