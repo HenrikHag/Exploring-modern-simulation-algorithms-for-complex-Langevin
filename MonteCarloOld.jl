@@ -26,6 +26,23 @@ begin
     # n=rand(d,1000)
 end
 
+##############################################################
+# 
+# This program will run a Monte Carlo Simulation, simulating a system of different parameters.
+# 
+# The Action:   The action of the system simulated. Here the physics of the system is defined.
+#   Example:    HO_Action()
+# 
+# n_tau:        The number of parts in the timelattice
+# iδτ:          The index of Euclidean time, i ∈ [1,...,n_tau]
+# δτ:           Lattice spacing
+# n_burn:       The number of configurations to thrash at start of simulations
+# n_skip - 1:   The number of configurations to thrash between each measurement
+# m̃:            Dimentionless effective mass,    ̃m = m δτ
+# ̃ω:            Dimentionless frequency,         ̃ω = ω δτ
+# 
+# 
+##############################################################
 
 ### Probability density diagram ###
 function PlotProbDD(file)
@@ -41,7 +58,7 @@ function PlotProbDDe(m,ω,ħ)
     plot!([x for x=-2:0.01:2],[((m*ω/(π*ħ))^(1/4)*exp(-m*ω*x^2/(2*ħ)))^2 for x=-2:0.01:2],linewidth=2)
 end
 
-begin
+if false
     PlotProbDD("results/measuredObsb.csv")
     PlotProbDDe(m,ω,1)
 end
@@ -249,9 +266,9 @@ function main(n_tau,meanfname,obsfname,expfname,m,ω)
                 # print("<x_1*x_i> "); printarray(exp_x0x1)
                 
                 # exp1, exp2, exp3      // Append each itt
-                # writee123tofile(n_tau,rfold,meanfname, exp_x, exp_x2, exp_x0x1, itt)
+                writee123tofile(n_tau,rfold,meanfname, exp_x, exp_x2, exp_x0x1, itt)
                 # curr1, curr2, curr3   // Append each itt
-                # writec123tofile(rfold,obsfname, Path, itt)
+                writec123tofile(rfold,obsfname, Path, itt)
                 # curr3, sum3           // New file
                 #filenamec3s3 = string("curr3sum3n",Int64(itt),".csv")
                 #writec3s3tofile(rfold,filenamec3s3, sum3)
@@ -272,6 +289,15 @@ end
 
 configs1 = [1 120; 0.8 150; 0.6 200; 0.5 240; 0.3 400; 0.2 600; 0.1 1200; 0.08 1500; 0.06 2000; 0.05 2400; 0.03 4000; 0.02 6000; 0.01 12000]
 # configs1[1,2]
+main(120,"expfullB1.csv","measuredObsB1.csv","expectationvalB1.csv",1,1)
+twopoint=[]
+for i = (120*3+2):(120*4+1)
+    append!(twopoint,mean(GetColumn(i,"results/measuredObsB1.csv")))
+end
+# twopoint
+plot(twopoint)
+# GetLastMean("results/measuredObsB1.csv",120*4)[120*3+1:120*4]
+plot(GetLastMean("results/measuredObsB1.csv",120*4)[120*3+1:120*4])
 
 for i=1:length(configs1[:,1])
     m = configs1[i,1]
@@ -279,9 +305,9 @@ for i=1:length(configs1[:,1])
     main(n_tau,"expfulla$(i).csv","measuredObsa$(i).csv","expectationvala$(i).csv",m,m)
 end
 
-
+plot(GetColumn(4,"results/expectationvala$(num1).csv"))
 begin
-    num1 = 13
+    num1 = 1
     plot(GetColumn(2,"results/expectationvala$(num1).csv"))    # ⟨x̂⟩
     hline!([0])
 end
@@ -347,12 +373,23 @@ end
 
 
 ######### Plot final Two-Point Correlation in ⟨xᵢ⟩ #########
-lastRow = LastRowFromFile("results/expfull.csv")
+lastRow = LastRowFromFile("results/expfullB1.csv")
 for i = 1:length(lastRow)
     if lastRow[i] <= 0
         lastRow[i] = NaN
     end
 end
+
+"""Plots two-point correlation from array exp_xjxi, normalized by first element
+"""
+function PlotTwoPointCorrelation1(exp_xjxi)
+    # println(exp_xjxi)
+    plot([(i,exp_xjxi[i]) for i=1:length(exp_xjxi)], title="Two-Point Correlation", label="⟨x₁xᵢ⟩")#, yaxis=:log10, size=[700,500])
+end
+PlotTwoPointCorrelation1(lastRow[2*120+2:3*120+1])
+
+err1 = Err(120, "results/expfullB1.csv", "results/measuredObsB1.csv")
+
 PlotTwoPointCorrelation(lastRow[2*n_tau+1:3*n_tau+1])
 # exp3 = [lastRow[1:16],lastRow[17:32]]
 # exp3 = [lastRow[i] for i=2:n_tau+1]
