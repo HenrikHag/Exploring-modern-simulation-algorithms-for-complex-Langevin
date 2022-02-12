@@ -3,7 +3,7 @@ module UsersGuide
 using Plots, Statistics
 
 export Plots, LastRowFromFile, PlotTwoPointCorrelation, PlotExp, plot_x
-export GetLastMean, Err
+export GetColumn, GetLastMean, GetTwoPointData, GetTP1data, Err
 
 # Creating functions to work on results from User's Guide to M C Methods
 
@@ -33,11 +33,46 @@ function LastRowFromFile(filename)
 end
 # lastRow = LastRowFromFile("results/expfull.csv")
 
+"""Returns column(s) of file delimited by ","
+"""
+function GetColumn(col,filename)
+    if length(col) == 1
+        al = Vector{Float64}(undef,0)
+        for c = col
+            for r = readlines(filename)
+                push!(al,parse.(Float64,split(r,",")[c]))
+            end
+        end
+        return al
+    end
+    all1 = Matrix{Float64}(undef,countlines(filename),length(col))
+    r1 = 1
+    for r = readlines(filename)
+        all1[r1,:] = parse.(Float64,split(r,",")[col])
+        r1 += 1
+    end
+    return all1
+end
+
 """Get last row of file with means  
 Returns Float64 of elements in range 2:n_tau+1
 """
 function GetLastMean(meanf, n_tau)
     return parse.(Float64,split(last(readlines(meanf)),","))[2:n_tau+1]
+end
+
+"""Gets the last n_tau columns from "filename" (measuredObs-file)
+"""
+function GetTwoPointData(filename)
+    ind = div(length(LastRowFromFile(filename))-1,4)
+    return GetColumn((3*ind+2:4*ind+1),filename)#,ind,(3*ind:4*ind+1)
+end
+
+"""Gets the second to last n_tau columns from "filename" (measuredObs-file)
+"""
+function GetTP1data(filename)
+    ind = div(length(LastRowFromFile(filename))-1,4)
+    return GetColumn((2*ind+2:3*ind+1),filename)
 end
 
 """Calculate the error  

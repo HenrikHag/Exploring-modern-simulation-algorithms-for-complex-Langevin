@@ -241,14 +241,11 @@ function main(n_tau,meanfname,obsfname,expfname,m,ω)
     touch(string(rfold,meanfname))
     touch(string(rfold,obsfname))
     touch(string(rfold,expfname))
-
     # show(IOContext(stdout, :limit => true),"text/plain",Path)
     # println()
     itt = 0
     Randlist = []
-    #                                                       #
     # Do n_total swipes, removing n_burn first swipes       #
-    #                                                       #
     a = @timed for i = 1:n_total
         Path, accept, h = MetroSwipe(n_tau, m, ω, h, idrate, rng, Path)
         if i > n_burn
@@ -257,40 +254,77 @@ function main(n_tau,meanfname,obsfname,expfname,m,ω)
                 append!(Randlist,h)
                 itt += 1
                 # println("Measured ",itt)
-                # itt = (i-1-n_burn)/(n_skip)+1
                 exp_x, exp_x2, exp_x0x1 = E_Vals(n_tau,sum1,sum2,sum3,itt)
-                # print("Path      "); printarray(Path); print("<s_i>     "); printarray(sum1)
-                
-                # print("<x_i>     "); printarray(exp_x)
-                # print("<(x_i)^2> "); printarray(exp_x2)
-                # print("<x_1*x_i> "); printarray(exp_x0x1)
-                
-                # exp1, exp2, exp3      // Append each itt
-                writee123tofile(n_tau,rfold,meanfname, exp_x, exp_x2, exp_x0x1, itt)
-                # curr1, curr2, curr3   // Append each itt
-                writec123tofile(rfold,obsfname, Path, itt)
-                # curr3, sum3           // New file
-                #filenamec3s3 = string("curr3sum3n",Int64(itt),".csv")
+                writee123tofile(n_tau,rfold,meanfname, exp_x, exp_x2, exp_x0x1, itt) # exp1, exp2, exp3  // Append each itt
+                writec123tofile(rfold,obsfname, Path, itt)             # curr1, curr2, curr3            // Append each itt
+                #filenamec3s3 = string("curr3sum3n",Int64(itt),".csv") # curr3, sum3                   // New file
                 #writec3s3tofile(rfold,filenamec3s3, sum3)
-                # sum3, exp3            // New file
-                #filenames3e3 = string("sum3exp3n",Int64(itt),".csv")
+                #filenames3e3 = string("sum3exp3n",Int64(itt),".csv")  # sum3, exp3                  // New file
                 #writes3e3tofile(rfold,filenames3e3, sum3, exp_x0x1)
-                # ⟨exp1⟩, ⟨exp2⟩, ⟨exp3⟩  // Append each itt
-                writeeMean(rfold,expfname,exp_x,exp_x2,exp_x0x1,itt)
+                writeeMean(rfold,expfname,exp_x,exp_x2,exp_x0x1,itt)   # ⟨exp1⟩, ⟨exp2⟩, ⟨exp3⟩      // Append each itt
             end
         end
     end
-    # exp_x /= (n_total-n_burn)/n_skip
-    #exp_x, exp_x2, exp_x0x1 += MetroUpdate(n)
     # println("Mean h = ", Statistics.mean(Randlist))
     println("Time: ",a.time)
     return a.time
 end
 
+"""Calculate mean and error of elements in an array
+"""
 function Err1(array1)
-    return [mean(array1), √(var(array1)/length(array1))]
+    mean1 = mean(array1)
+    err1 = 0
+    for i=1:length(array1)
+        err1 += (array1[i]-mean1)^2
+    end
+    err1 /= length(array1)*(length(array1)-1)
+    return [mean(array1), err1]#std(array1)/√length(array1)] #  √(var(array1)/length(array1)),
 end
-@benchmark Err1([5,6,1,2,3])
+# @benchmark 
+Err1([1,2,3,4,5,6])
+
+
+function Jackknife1(array1)
+    jf = [mean(array1[2:length(array1)])]
+    for i=2:length(array1)-1
+        append!(jf,mean(append!(array1[1:i-1],array1[(i+1):length(array1)])))
+    end
+    append!(jf,mean(array1[1:length(array1)-1]))
+    jfvm = 0
+    for i=1:length(jf)
+        jfvm += (jf[i]-mean(jf))^2
+    end
+    jfvm *= (length(jf)-1)/length(jf)
+    return [mean(array1),jfvm]
+end
+Jackknife1([1,2,3,4,5,6])
+
+@benchmark Jackknife1([i for i = 1:10000])
+
+function JK1(matrix1)
+    jf = Matrix{Float64}(undef,length(matrix1[1,:]),2)
+    for i=1:length(matrix1[1,:])
+        jf[i,:] = Jackknife1(matrix1[:,i])
+    end
+    return jf
+end
+
+function ERR1(matrix1)
+    err1 = Matrix{Float64}(undef,length(matrix1[1,:]),2)
+    for i=1:length(matrix1[1,:])
+        err1[i,:] = Err1(matrix1[:,i])
+    end
+    return err1
+end
+
+erd1 = ERR1(twopointD1)
+plot(erd1[:,1],yerr=erd1[:,2].*300)
+
+jfd = JK1(twopointD)
+jfd1 = JK1(twopointD1)
+JK1([1 1 1 1; 1 3 2 3; 1 1 1 3; 1 1 2 3; 2 1 2 3])
+plot(jfd1[:,1],yerr=jfd1[:,2].*300)
 
 function TwoPointC(data1)
     array1 = []
@@ -309,10 +343,10 @@ end
 # evalfile("MetropolisUpdate.jl")
 GetColumn(2:3,"results/measuredObsB1.csv")
 
-function GetTwoPointData(filename)
-    ind = div(length(LastRowFromFile(filename))-1,4)
-    return GetColumn((3*ind+2:4*ind+1),filename)#,ind,(3*ind:4*ind+1)
-end
+
+twopointD1 = GetTP1data("results/measuredObsB1.csv")
+tp1 = TwoPointC(twopointD1)
+plot(tp1[:,1],yerr=jfd1)
 
 twopointD = GetTwoPointData("results/measuredObsB1.csv")
 t2 = TwoPointC(twopointD)

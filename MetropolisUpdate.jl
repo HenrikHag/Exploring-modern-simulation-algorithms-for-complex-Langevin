@@ -6,7 +6,7 @@ export Random, Printf, Plots, Gnuplot
 export n_tau, idrate, h, m, ω, accept, sum1, sum2, sum3
 export Exp_x2, HO_Action, E_Vals, MeasureObs
 export printarray, writee123tofile, writec123tofile, writec3s3tofile, writes3e3tofile
-export plotexpx, plotexpx1, plotexpx2, GetColumn, AutoCorrR
+export plotexpx, plotexpx1, plotexpx2, AutoCorrR
 
 #, AutoCorrelation
 
@@ -52,26 +52,7 @@ function Exp_x2(n_tau, m, ω)
     return exp_x2
 end
 
-"""Returns column(s) of file delimited by ","
-"""
-function GetColumn(col,filename)
-    if length(col) == 1
-        al = Vector{Float64}(undef,0)
-        for c = col
-            for r = readlines(filename)
-                push!(al,parse.(Float64,split(r,",")[c]))
-            end
-        end
-        return al
-    end
-    all1 = Matrix{Float64}(undef,countlines(filename),length(col))
-    r1 = 1
-    for r = readlines(filename)
-        all1[r1,:] = parse.(Float64,split(r,",")[col])
-        r1 += 1
-    end
-    return all1
-end
+
 # nrow()
 """Returns AutoCorrelation of arrayC
 """
