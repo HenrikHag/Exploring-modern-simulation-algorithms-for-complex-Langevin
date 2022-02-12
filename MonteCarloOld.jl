@@ -267,6 +267,11 @@ function main(n_tau,meanfname,obsfname,expfname,m,ω)
     end
     # println("Mean h = ", Statistics.mean(Randlist))
     println("Time: ",a.time)
+    if false
+        println("Jackknife analysis...")
+        twopointD = GetTwoPointData(string(rfold,meanfname))
+        return a.time, JK1(twopointD)
+    end
     return a.time
 end
 
@@ -291,12 +296,15 @@ function Jackknife1(array1)
         append!(jf,mean(append!(array1[1:i-1],array1[(i+1):length(array1)])))
     end
     append!(jf,mean(array1[1:length(array1)-1]))
-    jfvm = 0
-    for i=1:length(jf)
-        jfvm += (jf[i]-mean(jf))^2
-    end
-    jfvm *= (length(jf)-1)/length(jf)
-    return [mean(array1),jfvm]
+    jf = jf.-mean(jf)
+    jf = jf.^2
+    jfvm = mean(jf)
+    # jfvm = 0
+    # for i=1:length(jf)
+    #     jfvm += (jf[i]-mean(jf))^2
+    # end
+    jfvm *= (length(jf)-1)#/length(jf)
+    return [mean(array1),√(jfvm)]
 end
 Jackknife1([1,2,3,4,5,6])
 
@@ -324,7 +332,10 @@ plot(erd1[:,1],yerr=erd1[:,2].*300)
 jfd = JK1(twopointD)
 jfd1 = JK1(twopointD1)
 JK1([1 1 1 1; 1 3 2 3; 1 1 1 3; 1 1 2 3; 2 1 2 3])
-plot(jfd1[:,1],yerr=jfd1[:,2].*300)
+plot(jfd1[1:5,1],yerr=jfd1[1:5,2].*300,yaxis=:log)
+
+erd = ERR1(twopointD)
+plot(jfd[1:9,1],yerr=jfd1[1:9,2],yaxis=:log)
 
 function TwoPointC(data1)
     array1 = []
@@ -372,11 +383,33 @@ plot(twopoint)
 # GetLastMean("results/measuredObsB1.csv",120*4)[120*3+1:120*4]
 plot(GetLastMean("results/measuredObsB1.csv",120*4)[120*3+1:120*4])
 
-for i=1:length(configs1[:,1])
+a2=[]
+for i=7:7#length(configs1[:,1])-5
     m = configs1[i,1]
     n_tau = configs1[i,2]
-    main(n_tau,"expfulla$(i).csv","measuredObsa$(i).csv","expectationvala$(i).csv",m,m)
+    push!(a2,main(n_tau,"expfulla$(i).csv","measuredObsa$(i).csv","expectationvala$(i).csv",m,m))
 end
+a2
+twopointD = GetTwoPointData("results/measuredObsa7.csv")
+jfd=JK1(twopointD)
+println(jfd[1:100])
+jfd=a2[7]
+jfd0 = Matrix{Float64}(undef,100,2)
+for i=1:100
+    if jfd[i,1]<=0.01
+        jfd0[i,:]=jfd0[i-1,:]
+    else
+        jfd0[i,:]=jfd[i,:]
+    end
+end
+plot(jfd0[1:100,1],yerr=jfd0[1:100,2],yaxis=:log,xlabel="Δτ",ylabel="G(Δτ)")
+plot(jfd[1:100,1],yerr=jfd[1:100,2],yaxis=:log,xlabel="Δτ",ylabel="G(Δτ)",yrange=[1.4*10^-3,10^2])
+plot(jfd[:,1],yerr=jfd1[:,2],xlabel="Δτ")
+
+function EstEffM(Gm1,Gp1)
+    return log10(Gm1/Gp1)/2
+end
+EstEffM(jfd[30,1],jfd[32,1])
 
 plot(GetColumn(4,"results/expectationvala$(num1).csv"))
 begin
