@@ -44,62 +44,18 @@ end
 # 
 ##############################################################
 
-### Probability density diagram ###
-function PlotProbDD(file)
-    arr1 = Vector{Float64}(undef,0)
-    for i=2:Int((length(LastRowFromFile(file))-1)/3)+1
-        append!(arr1,GetColumn(i,file))
-    end
-    histogram(arr1,bins=[i for i=floor(minimum(arr1)*10)/10:0.1:(floor(maximum(arr1)*10)+1)/10],normed=true)#,weights=repeat([1/length(arr1)],length(arr1))
-end
-
-function PlotProbDDe(m,ω,ħ)
-    println("m = ",m,", ω = ",ω,", ħ = ",ħ)
-    plot!([x for x=-2:0.01:2],[((m*ω/(π*ħ))^(1/4)*exp(-m*ω*x^2/(2*ħ)))^2 for x=-2:0.01:2],linewidth=2)
-end
-
-if false
-    PlotProbDD("results/measuredObsb.csv")
-    PlotProbDDe(m,ω,1)
-end
 
 
-# TODO:
+#                   #
+#       TODO        #
+#                   #
+
 # VIII. SUGGESTED PROBLEMS
-    # b, c, d, e, f, g
+#   - b, c, d, e, f, g
+#
 
 
 
-#                                   #
-# Measure the current observables   #
-#                                   #
-"""Adds Path coords to the sums  
-```julia
-function MeasureObs()
-    for i = 1:n_tau 
-        sum1[i] += Path[i]
-        sum2[i] += Path[i]^2
-        sum3[i] += Path[1]*Path[i]
-```"""
-function MeasureObs(n_tau, sum1, sum2, sum3, Path)
-    for i = 1:n_tau
-        sum1[i] += Path[i]
-        sum2[i] += Path[i]^2
-        sum3[i] += Path[1]*Path[i]
-    end
-    return sum1, sum2, sum3
-end
-
-"""Append the mean of exp_x, exp_x2, exp_x0x1 on one line to a file  
-"""
-function writeeMean(path,filename,exp_x,exp_x2,exp_x0x1,itt)
-    open(string(path,filename),"a") do file
-        write(file,string(Int64(itt),","))
-        write(file,string(mean(exp_x),","))
-        write(file,string(mean(exp_x2),","))
-        write(file,string(mean(exp_x0x1),"\n"))
-    end
-end
 
 
 
@@ -270,98 +226,16 @@ function main(n_tau,meanfname,obsfname,expfname,m,ω)
     if false
         println("Jackknife analysis...")
         twopointD = GetTwoPointData(string(rfold,meanfname))
-        return a.time, JK1(twopointD)
+        return a.time, Jackknife1(twopointD)
     end
     return a.time
 end
 
-"""Calculate mean and error of elements in an array
-"""
-function Err1(array1)
-    mean1 = mean(array1)
-    err1 = 0
-    for i=1:length(array1)
-        err1 += (array1[i]-mean1)^2
-    end
-    err1 /= length(array1)*(length(array1)-1)
-    return [mean(array1), err1]#std(array1)/√length(array1)] #  √(var(array1)/length(array1)),
-end
-# @benchmark 
-Err1([1,2,3,4,5,6])
 
 
-function Jackknife1(array1)
-    jf = [mean(array1[2:length(array1)])]
-    for i=2:length(array1)-1
-        append!(jf,mean(append!(array1[1:i-1],array1[(i+1):length(array1)])))
-    end
-    append!(jf,mean(array1[1:length(array1)-1]))
-    jf = jf.-mean(jf)
-    jf = jf.^2
-    jfvm = mean(jf)
-    # jfvm = 0
-    # for i=1:length(jf)
-    #     jfvm += (jf[i]-mean(jf))^2
-    # end
-    jfvm *= (length(jf)-1)#/length(jf)
-    return [mean(array1),√(jfvm)]
-end
-Jackknife1([1,2,3,4,5,6])
-
-@benchmark Jackknife1([i for i = 1:10000])
-
-function JK1(matrix1)
-    jf = Matrix{Float64}(undef,length(matrix1[1,:]),2)
-    for i=1:length(matrix1[1,:])
-        jf[i,:] = Jackknife1(matrix1[:,i])
-    end
-    return jf
-end
-
-function ERR1(matrix1)
-    err1 = Matrix{Float64}(undef,length(matrix1[1,:]),2)
-    for i=1:length(matrix1[1,:])
-        err1[i,:] = Err1(matrix1[:,i])
-    end
-    return err1
-end
-
-erd1 = ERR1(twopointD1)
-plot(erd1[:,1],yerr=erd1[:,2].*300)
-
-jfd = JK1(twopointD)
-jfd1 = JK1(twopointD1)
-JK1([1 1 1 1; 1 3 2 3; 1 1 1 3; 1 1 2 3; 2 1 2 3])
-plot(jfd1[1:5,1],yerr=jfd1[1:5,2].*300,yaxis=:log)
-
-erd = ERR1(twopointD)
-plot(jfd[1:9,1],yerr=jfd1[1:9,2],yaxis=:log)
-
-function TwoPointC(data1)
-    array1 = []
-    if typeof(data1) == Array{Float64}
-        for i in data1
-            push!(array1,Err1(i))
-        end
-    elseif typeof(data1) == Matrix{Float64}
-        array1 = Matrix{Float64}(undef,length(data1[1,:]),2)
-        for i = 1:length(data1[1,:])
-            array1[i,:] = Err1(data1[:,i])
-        end
-    end
-    return array1
-end
-# evalfile("MetropolisUpdate.jl")
-GetColumn(2:3,"results/measuredObsB1.csv")
 
 
-twopointD1 = GetTP1data("results/measuredObsB1.csv")
-tp1 = TwoPointC(twopointD1)
-plot(tp1[:,1],yerr=jfd1)
 
-twopointD = GetTwoPointData("results/measuredObsB1.csv")
-t2 = TwoPointC(twopointD)
-plot(t2[:,1],yerr=t2[:,2])
 
 GetTwoPointData("t3st.csv")
 
@@ -391,7 +265,7 @@ for i=7:7#length(configs1[:,1])-5
 end
 a2
 twopointD = GetTwoPointData("results/measuredObsa7.csv")
-jfd=JK1(twopointD)
+jfd=Jackknife1(twopointD)
 println(jfd[1:100])
 jfd=a2[7]
 jfd0 = Matrix{Float64}(undef,100,2)
@@ -403,7 +277,6 @@ for i=1:100
     end
 end
 plot(jfd0[1:100,1],yerr=jfd0[1:100,2],yaxis=:log,xlabel="Δτ",ylabel="G(Δτ)")
-plot(jfd[1:100,1],yerr=jfd[1:100,2],yaxis=:log,xlabel="Δτ",ylabel="G(Δτ)",yrange=[1.4*10^-3,10^2])
 plot(jfd[:,1],yerr=jfd1[:,2],xlabel="Δτ")
 
 function EstEffM(Gm1,Gp1)
@@ -448,7 +321,7 @@ end
 #############################
 #       AutoCorrelation     #
 #############################
-data = GetColumn(2,"results/measuredObsA12.csv")
+data = GetColumn(2,"results/measuredObsa7.csv")
 # LastRowFromFile("results/measuredObs.csv")
 autocorrdata = StatsBase.autocor(data,[i for i=0:length(data)-1];demean=true)
 plot(autocorrdata,title="AutoCorr by StatsBase package")
@@ -478,36 +351,13 @@ begin
 end
 
 
-######### Plot final Two-Point Correlation in ⟨xᵢ⟩ #########
-lastRow = LastRowFromFile("results/expfullB1.csv")
-for i = 1:length(lastRow)
-    if lastRow[i] <= 0
-        lastRow[i] = NaN
-    end
-end
-
-"""Plots two-point correlation from array exp_xjxi, normalized by first element
-"""
-function PlotTwoPointCorrelation1(exp_xjxi)
-    # println(exp_xjxi)
-    plot([(i,exp_xjxi[i]) for i=1:length(exp_xjxi)], title="Two-Point Correlation", label="⟨x₁xᵢ⟩")#, yaxis=:log10, size=[700,500])
-end
-PlotTwoPointCorrelation1(lastRow[2*120+2:3*120+1])
-
-err1 = Err(120, "results/expfullB1.csv", "results/measuredObsB1.csv")
-
-PlotTwoPointCorrelation(lastRow[2*n_tau+1:3*n_tau+1])
-# exp3 = [lastRow[1:16],lastRow[17:32]]
-# exp3 = [lastRow[i] for i=2:n_tau+1]
-# exp3 = [lastRow[i+16] for i=2:17]
-# PlotExp(exp3,3)
 
 
 ######### Plot ⟨x⟩ #########
 n_tau
 begin
-    plot_x(n_tau,"results/expfullA12.csv",[2,4,6,8])#[5,12,22,32,42,52])#0)#[i for i=1:n_tau])
-    plot!([0 for i=1:length(readlines("results/expfullA12.csv"))], title="Expectationvalue of x", label="⟨x⟩ₜₕₑ",legend=:bottom)
+    plot_x("results/expfulla7.csv",1,[20,40,60,80])#[5,12,22,32,42,52])#0)#[i for i=1:n_tau])
+    plot!([0 for i=1:length(readlines("results/expfulla7.csv"))], title="Expectationvalue of x", label="⟨x⟩ₜₕₑ",legend=:bottom)
 end
 
 
@@ -561,28 +411,6 @@ plot(mean1,yerr=err,title="Autocorrelation many runs")
 
 
 
-@time err = Err(n_tau,meanf,obsf)
-
-
-
-function PlotExpE_x(num, meanf, obsf, err)
-    if length(err) < num
-        println("length(err) < num")
-        err = Err(num, meanf, obsf)
-    end
-    plot([0 for i=1:num], label="⟨x⟩ₑₓₚₑ=0")
-    lastRow = LastRowFromFile(meanf)
-    exp3 = [lastRow[i] for i=2:num+1]
-    title = "Expectationvalue x"
-    label = "⟨xᵢ⟩"
-    plot!(exp3, yerr=err[1:num], title=title, label=label)
-    #plote_x(exp3,err)
-    # exp3 = [lastRow[i+n_tau] for i=2:n_tau+1]
-    # PlotExp(exp3,3)
-end
-
-PlotExpE_x(n_tau, meanf, obsf, err)
-
 
 
 
@@ -625,377 +453,3 @@ AutoCorrR(rand(gaussianD,200))
 plot(real.(AutoCorrR(rand(gaussianD,2000))))
 
 
-"""(DEVELOPMENT)  
-AutoCorrelation function
-"""
-function AutoC(n_tau, reducedlength, meanf, obsf)
-    if typeof(meanf) == String
-        if reducedlength == 0
-            mean3 = LastRowFromFile(meanf)[2:n_tau+1]      # Final mean
-        else
-            mean3 = parse.(Float64,split(readlines(meanf)[reducedlength],","))[2:n_tau+1]
-        end
-    else
-        mean3 = meanf
-    end
-    #
-    # Append all obs to rowData
-    rowData = []
-    if typeof(obsf) == String
-        @time if reducedlength == 0
-            for r = readlines(obsf)
-                push!(rowData,parse.(Float64,split(r,",")[2:n_tau+1]))
-            end
-        else
-            for r = readlines(obsf)[1:reducedlength]
-                push!(rowData,parse.(Float64,split(r,",")[2:n_tau+1]))
-            end
-        end
-    else
-        rowData = obsf
-    end
-    println("Created rowData")
-    # println(rowData)
-    # Calculate autocorrelation
-    N_meas = length(rowData)
-    autocorr = zeros(Float64, N_meas-1, n_tau)
-    if n_tau == 1
-        for tau_MC=0:N_meas-2
-            for ii = 1:N_meas-tau_MC
-                # println(tau_MC+1," ",1," ",ii," ",ii+tau_MC," ",)
-                # println([rowData[i] for i=N_meas-tau_MC:length(rowData)],length(rowData))
-                meand1 = [rowData[i] for i=1:N_meas-tau_MC]
-                meand2 = [rowData[i] for i=tau_MC+1:N_meas]
-                if length(meand1) == 1
-                    mean1 = meand1[1]
-                else
-                    mean1 = mean(meand1)
-                    # println(length(rowData))
-                    # println(length(meand1),typeof(meand1))
-                    # println(mean([1,2,3]))
-                    # println(success!)
-                end
-                if length(meand2) == 1
-                    mean2 = meand2[1]
-                else
-                    mean2 = mean(meand2)
-                end
-                autocorr[tau_MC+1,1] += (rowData[ii]-mean1)*(rowData[ii+tau_MC]-mean2)/(N_meas-tau_MC-1)
-                # println("Term1 ",rowData[ii]-mean([rowData[i] for i=1:N_meas-tau_MC]))
-                # println("Term2 ",rowData[ii+tau_MC]-mean([rowData[i] for i=(N_meas-tau_MC):length(rowData)]))
-                # println("Term3 ",(N_meas-tau_MC-1))
-            end
-            println("Finished tau_MC ",tau_MC," / ", N_meas-2)
-        end
-        for ii = 2:N_meas-1
-            autocorr[ii,1] /= autocorr[1,1]
-        end
-        autocorr[1,1] /= autocorr[1,1]
-        println("Calculated the autocorrelation for the (",1,"/",n_tau,")")
-        return autocorr
-    end
-    # println("Autocorrelation: ")
-    # show(IOContext(stdout, :limit => true),"text/plain",autocorr)
-    println("\nRowData: ")
-    show(IOContext(stdout, :limit => true),"text/plain",rowData)
-    # println(rowData[100][100], " ",rowData[2][2])
-    println("\nAutoCorrelation[2,2]: ",autocorr[2,2])
-    for i=1:n_tau
-        @time for tau_MC=0:N_meas-2
-            mean1 = mean([rowData[iii][i] for iii=1:N_meas-tau_MC])
-            mean2 = mean([rowData[iii][i] for iii=tau_MC+1:N_meas])
-            for ii = 1:N_meas-tau_MC
-                # println(tau_MC+1," ",i," ",ii," ",ii+tau_MC)
-                autocorr[tau_MC+1,i] += (rowData[ii][i]-mean1)*(rowData[ii+tau_MC][i]-mean2)/(N_meas-tau_MC-1)
-            end
-            # if false#tau_MC > N_meas-5
-            #     show(IOContext(stdout, :limit => true),"text/plain",rowData)
-            #     println("\nmean1= ", mean1," of: ",[rowData[iii][i] for iii=1:N_meas-tau_MC])
-            #     println("mean2= ", mean2," of: ",[rowData[iii][i] for iii=tau_MC+1:N_meas])
-            #     for ii = 1:N_meas-tau_MC
-            #         println("e1: ",rowData[ii][i]," e2: ",rowData[ii+tau_MC][i])
-            #     end
-            #     println()
-            # end
-        end
-        for ii = 2:N_meas-1
-            autocorr[ii,i] /= autocorr[1,i]
-        end
-        autocorr[1,i] /= autocorr[1,i]
-        println("Calculated autocorrelation for (",i,"/",n_tau,")")
-        println("Autocorrelation: ")
-        show(IOContext(stdout, :limit => true),"text/plain",autocorr[i])
-    end
-    return autocorr
-end
-
-@time autoc = AutoC(2, 0,"results/expfullG.csv","results/measuredObsG.csv")
-plot(autoc[:,1])
-
-begin
-    raw = []
-    for r = readlines(obsf)
-        push!(raw,parse.(Float64,split(r,",")[2]))
-    end
-    mean4 = LastRowFromFile(meanf)[2]
-    # raw=[rowdata[i][1] for i=1:length(rowdata)]
-    # mean4
-    a_0=0
-    a_5=0
-    a_τ=0
-    for i=1:length(raw)
-        a_0+=(raw[i]-mean4)*(raw[i]-mean4)/(length(raw)-1)
-    end
-    m1=0
-    m2=0
-    τ_MC=length(raw)-5
-    for i = 1:length(raw)-τ_MC
-        m1 += raw[i]/(length(raw)-τ_MC)
-        m2 += raw[length(raw)-i+1]/(length(raw)-τ_MC)
-    end
-    for i=1:length(raw)-τ_MC
-        a_τ += (raw[i]-m1)*(raw[i+τ_MC]-m2)/(length(raw)-τ_MC-1)
-    end
-end
-# Autocorrelation does not work for gaussian even
-
-begin
-    autocorrGaussian = AutoC(1,0,mean(path),path)
-    autocorrGaussian
-    plot(autocorrGaussian[:,1])
-end
-m1
-m2
-a_0
-# a
-a_τ
-a_τ/a_0
-# n_tau
-
-# Ph = Pka + log10([a]/[b])
-# ph-pka=log10([a]/[b])
-# 10^(ph-pka)=[a]/[b]
-# pka=2.2
-# ph=4.2
-# x=10^(ph-pka)
-# 10^(ph-pka)/(10^(ph-pka)+1)*100
-
-
-auto = sum(autoc, dims=2)
-for i=1:1019
-    auto[i] /= 1200
-end
-plot(auto)
-auto
-row(autoc)
-
-@time begin
-    plot([0 for i=1:length(autoc[:,1])],legend=:bottom)
-    for i = 1:400:n_tau-1
-        plot!(autoc[:,i], label="A(x_$(i)))")
-    end
-    plot!(autoc[:,n_tau], label="A(x_$(n_tau))")
-end
-
-
-"""
-# n = 1; randinc = 0;
-# Path, accept, sum1, sum2, sum3, (exp_x, exp_x2, exp_x0x1, randinc) = zeros(n_tau), zeros(n_tau), zeros(n_tau), zeros(n_tau), zeros(n_tau), MetropolisUpdate(n, randinc);
-# sum1
-# exp_x, exp_x2, exp_x0x1 = MetropolisUpdate(20);
-
-
-# ab = DataFrame(Name = ["AKANKSHA", "TANYA", "PREETIKA", "VRINDA", "JAHNVI"],
-#                Age = [42, 44, 22, 81, 93],
-#                Salary = [540000, 650000, 900000, 770000, 850000],
-#          RESIDENCE=["DELHI", "DELHI", "UP", "HARYANA", "UP"]
-#                )
-
-# CSV.write(string(rfold,"sum3exp3.csv"),ab)
-# file = CSV.read(string(rfold,"sum3exp3n1.csv"),DataFrame)
-
-
-# CSV.write()
-
-# randlist=zeros(100)
-# for i = 1:100
-#     randlist[i]=rand(rng)
-# end
-
-# randlist
-# M = zeros(10,10)
-# M[1,1] = randn()
-# M
-
-# length(a)
-# size(M)
-
-# z = zeros(Integer, 10)
-# o = ones(2,2)
-# r = randn(Float64,2*n_tau*100*10000)
-
-
-#global randinc = 0
-# for i = 1:n_tau
-#     Path[i] = 1
-# end
-# accept
-
-# randinc
-function printarrayold(array,sums)
-    exval = zeros(length(array))
-    for i = 1:length(array)
-        if array[i] < 0
-            @printf("%.2f ", (array[i]/sums))
-        else
-            @printf(" %.2f ", (array[i]/sums))
-        end
-        exval[i] = array[i]/sums[i]
-    end
-    print("\n")
-    return exval
-end
-
-#                               #
-# Defining a metropolis swipe   #
-#                               #
-function MetropolisUpdate(n_burn, n, randinc)
-    for i = 1:n
-        MetroSwipe()
-    end
-    
-    for i = 1:n
-        MetroSwipe()
-    end
-    exp_x, exp_x2, exp_x0x1 = E_Vals()
-    acceptrate = 0
-    for i=1:length(accept)
-        acceptrate += accept[i]
-    end
-    # acceptrate = acceptrate/n
-    @printf("accept:    %.3f,  %d\n", acceptrate/(n*length(accept)),acceptrate)
-    @printf("randinc:   %.3f,  %d\n", randinc/(length(r)),randinc)
-    return exp_x, exp_x2, exp_x0x1, randinc
-end
-
-
-# MetroSwipe()
-# exp_x, exp_x2, exp_x0x1 = E_Vals();
-# sum1
-
-
-# Correlation(3,"results/expfull.csv")
-# nrow(CSV.read("results/expfull.csv", DataFrame))
-# println(Gnuplot.gpversion())
-# test_terminal()
-# for i = 1:length(Path)
-#     print(i,"\n")
-# end
-
-# begin
-#     auto = zeros(Float64,size(autoc,1))
-#     @time for i=1:size(autoc,1)
-#         for ii=1:size(autoc,2)
-#             auto[i] += autoc[i,ii]
-#         end
-#         println("Calculated ",i)
-#     end
-#     plot(auto)
-# end
-    
-# autocorrel[:,1]
-# ray = readlines("results/measuredObs.csv")[1:48]
-# rayow=split(ray, ",")
-
-
-# begin
-#     rowData = []
-#     for r = readlines("results/measuredObs.csv")[1:50]
-#         push!(rowData,parse.(Float64,split(r,",")[2:n_tau]))
-#     end
-# end
-# rowData
-
-# function r1(l)
-#     rowData=Vector{Float64}(undef,0)
-#     vec = []
-#     for r = readlines("results/measuredObs.csv")[1:l]
-#         # vec = Vector{Float64}(split(r,",")[2])
-#         append!(rowData,parse.(Float64,split(r,",")[2]))
-#         # println(split(r,",")[2])
-#     end
-#     # println(rowData)
-#     plot(rowData)
-# end
-
-# r1(1000)
-
-# autocorr = zeros(Float64,20)
-
-
-# function Count()
-#     number = 0
-#     while true
-#         print(number,"\n")
-#         number += 1
-#         sleep(1)
-#     end
-# end
-# # Count()
-
-# function testbc()
-#     # Testing the boundary conditions of our chain
-#     print("\nN_(n+1): ")
-#     for i = 1:n_tau
-#         coord = i
-#         n_p1 = coord % n_tau + 1
-#         print(n_p1," ")
-#     end
-#     print("\nN_(n-1): ")
-#     for i = 1:n_tau
-#         coord = i
-#         n_m1 = (coord - 2 + n_tau) % n_tau + 1
-#         print(n_m1," ")
-#     end
-# end
-# # testbc()
-
-# testMatrix = [1 2 3; 4 5 6; 7 8 9]
-# for i = 1:len(testMatrix)
-#     print(testMatrix[i][1])
-# end
-# sum(testMatrix, dims=1)
-
-
-function plotgp()
-    #picturename = string(path,figname,".png")
-    #@gp "set datafile separator ','"
-    x = 1:24
-    @gp "set terminal png size 400,300"
-    @gp x x.^2 "with lines"
-    save("ex1.png"; term="pngcairo size 800,600", output="ex1.png")
-    @gp "load(\"ex1.png\")"
-    #@gp "plot x myProject/results/expfull.csv using 1 with lines"
-    #save(term="pngcairo size 480,360",output=picturename)
-end
-plotgp()
-# plotgp("myProject/results/","expfullpic")
-# @gp (1:20).^2
-
-
-###### Old AutoCorrelation ######
-autocorrel = AutoCorrelation(n_tau, 500,"results/expfull.csv","results/measuredObs.csv")
-plot(autocorrel[:,1])
-begin
-    plot([0 for i=1:n_tau-1],legend=:bottom)
-    for i = 1:n_tau
-        plot!(autocorrel[:,i])
-    end
-    plot!(autocorrel[:,n_tau])
-end
-#################################
-
-
-
-
-"""

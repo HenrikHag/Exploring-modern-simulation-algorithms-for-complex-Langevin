@@ -4,9 +4,9 @@ using Random, Printf, Plots, Gnuplot, Statistics, FFTW
 
 export Random, Printf, Plots, Gnuplot
 export n_tau, idrate, h, m, ω, accept, sum1, sum2, sum3
-export Exp_x2, HO_Action, E_Vals, MeasureObs
-export printarray, writee123tofile, writec123tofile, writec3s3tofile, writes3e3tofile
-export plotexpx, plotexpx1, plotexpx2, AutoCorrR
+export Exp_x2, AutoCorrR, HO_Action, E_Vals#, MeasureObs
+export printarray, writee123tofile, writec123tofile, writec3s3tofile, writes3e3tofile, writeeMean
+export plotexpx, plotexpx1, plotexpx2
 
 #, AutoCorrelation
 
@@ -96,6 +96,31 @@ end
 
 
 #                                   #
+# Measure the current observables   #
+#                                   #
+"""Adds Path coords to the sums  
+```julia
+function MeasureObs()
+    for i = 1:n_tau 
+        sum1[i] += Path[i]
+        sum2[i] += Path[i]^2
+        sum3[i] += Path[1]*Path[i]
+```"""
+function MeasureObs(n_tau, sum1, sum2, sum3, Path)
+    for i = 1:n_tau
+        sum1[i] += Path[i]
+        sum2[i] += Path[i]^2
+        sum3[i] += Path[1]*Path[i]
+    end
+    return sum1, sum2, sum3
+end
+
+
+
+
+
+
+#                                   #
 # Defining the expectationvalues    #
 #                                   #
 """Updates the expectationvalues based on the current value of sums and n_accept:
@@ -141,6 +166,7 @@ function printarray(array)
     print("\n")
     return
 end
+
 
 
 
@@ -215,7 +241,16 @@ function writes3e3tofile(path,filename,sum3,exp_x0x1)
     end
 end
 
-
+"""Append the mean of exp_x, exp_x2, exp_x0x1 on one line to a file  
+"""
+function writeeMean(path,filename,exp_x,exp_x2,exp_x0x1,itt)
+    open(string(path,filename),"a") do file
+        write(file,string(Int64(itt),","))
+        write(file,string(mean(exp_x),","))
+        write(file,string(mean(exp_x2),","))
+        write(file,string(mean(exp_x0x1),"\n"))
+    end
+end
 
 
 
@@ -272,6 +307,9 @@ function plotexpx2(n, n_tau, individualm)
     save(term="pngcairo size 800,600", output="exp_x_2.png")
     #@gp """load("corr1.png")"""
 end
+
+
+
 
 
 
