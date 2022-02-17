@@ -2,7 +2,7 @@ module UsersGuide
 
 using Plots, Statistics
 
-export GetColumn, GetLastMean, GetTwoPointData, GetTP1data, GetExpXData, Err1
+export GetColumn, GetData, GetTwoPointData, GetTP1data, GetExpXData, GetLastMean, Err1
 export Jackknife1
 export LastRowFromFile, PlotExp, plot_x, PlotProbDD, PlotProbDDe, PlotTPCF #, PlotTwoPointCorrelation
 
@@ -65,46 +65,43 @@ function GetColumn(col,filename::String)
 end
 
 
-
-"""Get last row of file with means  
-Returns Float64 of elements in range 2:n_tau+1
+"""Get columns from "filename" throwing away the index at column 1,  
+then taking a group of columns 1:n_tau corresponding to a dataset
 """
-function GetLastMean(meanf, n_tau)
-    return parse.(Float64,split(last(readlines(meanf)),","))[2:n_tau+1]
+function GetData(filename,Nn_tau,n)
+    ind = div(length(LastRowFromFile(filename))-1,Nn_tau)
+    return GetColumn(((n-1)*ind+2:n*ind+1),filename)
 end
-
 
 
 """Gets the last n_tau columns from "filename" (measuredObs-file)
 """
 function GetTwoPointData(filename)
-    ind = div(length(LastRowFromFile(filename))-1,4)
-    return GetColumn((3*ind+2:4*ind+1),filename)#,ind,(3*ind:4*ind+1)
+    return GetData(filename,4,4)
+    #GetColumn((3*ind+2:4*ind+1),filename)#,ind,(3*ind:4*ind+1)
 end
 
 """Gets the second to last n_tau columns from "filename" (measuredObs-file)
 """
 function GetTP1data(filename)
-    ind = div(length(LastRowFromFile(filename))-1,4)
-    return GetColumn((2*ind+2:3*ind+1),filename)
+    return GetData(filename,4,3)
 end
 
-"""Gets the n-th n_tau columns from "filename" (expfull-file)  
+
+"""Gets the n-th n_tau columns from "filename" (expfull/measuredObs-file)  
 n = 1: ⟨x̂⟩  
 n = 2: ⟨x̂²⟩  
 n = 3: ⟨x₁xᵢ⟩  
 Specify number (array or Int) for a specific column in the n-th n_tau column  
 """
 function GetExpXData(filename)
-    ind = div(length(LastRowFromFile(filename))-1,4)
-    return GetColumn((2:ind+1),filename)
+    return GetData(filename,3,1)
 end
 function GetExpXData(filename, n)
-    ind = div(length(LastRowFromFile(filename))-1,4)
-    return GetColumn((2+(1-n)*ind:n*ind+1),filename)    
+    return GetData(filename,3,n)
 end
 function GetExpXData(filename, n, number)
-    ind = div(length(LastRowFromFile(filename))-1,4)
+    ind = div(length(LastRowFromFile(filename))-1,3)
     # if ∉(max(number),[1:ind])
     #     return ErrorException("Number not in range of 1:n_tau")
     # end
@@ -112,6 +109,12 @@ function GetExpXData(filename, n, number)
 end
 
 
+"""Get last row of file with means  
+Returns Float64 of elements in range 2:n_tau+1
+"""
+function GetLastMean(meanf, n_tau)
+    return parse.(Float64,split(last(readlines(meanf)),","))[2:n_tau+1]
+end
 
 
 
@@ -158,7 +161,7 @@ function Jackknife1(array1::AbstractArray)
     #     jfvm += (jf[i]-mean(jf))^2
     # end
     jfvm *= (length(jf)-1)#/length(jf)
-    println("Done")
+    # println("Done")
     return [mean(array1),√(jfvm)]
 end
 

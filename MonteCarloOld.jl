@@ -20,7 +20,6 @@ begin
     const meanf = "results/expfull.csv"
     
     # n_tau, m, ω
-    # expected_x2 = Exp_x2(n_tau, m, ω)
     rng = MersenneTwister(11111)
     gaussianD = Normal(0.16, 1.5)
     # n=rand(d,1000)
@@ -185,8 +184,8 @@ function main(n_tau,meanfname,obsfname,expfname,m,ω)
     exp_x, exp_x2, exp_x0x1 = zeros(n_tau), zeros(n_tau), zeros(n_tau)
     sum1, sum2, sum3 = zeros(n_tau), zeros(n_tau), zeros(n_tau)
     n_burn = 100
-    n_skip = n_tau/10#12
-    n_total = n_burn + 1 + (n_skip)*10000#20000#200100
+    n_skip = 1#n_tau/10#12
+    n_total = n_burn + 1 + (n_skip)*1000#20000#200100
     accept = 0
     idrate = 0.8
     h = 1
@@ -207,7 +206,7 @@ function main(n_tau,meanfname,obsfname,expfname,m,ω)
         if i > n_burn
             if n_skip == 0 || (i-1-n_burn)%n_skip == 0
                 sum1, sum2, sum3 = MeasureObs(n_tau, sum1, sum2, sum3, Path)
-                append!(Randlist,h)
+                append!(Randlist,accept)
                 itt += 1
                 # println("Measured ",itt)
                 exp_x, exp_x2, exp_x0x1 = E_Vals(n_tau,sum1,sum2,sum3,itt)
@@ -221,7 +220,7 @@ function main(n_tau,meanfname,obsfname,expfname,m,ω)
             end
         end
     end
-    # println("Mean h = ", Statistics.mean(Randlist))
+    println("Mean acceptrate = ", Statistics.mean(Randlist))
     println("Time: ",a.time)
     if false
         println("Jackknife analysis...")
@@ -231,21 +230,18 @@ function main(n_tau,meanfname,obsfname,expfname,m,ω)
     return a.time
 end
 
+####################### main end ##########################################
 
-
-
-
-
-
-GetTwoPointData("t3st.csv")
-
-ab1 = Matrix{Float64}(undef,2,3)
-a1 = Vector{Float64}(undef,3)
-a1[1],a1[2],a1[3]=1,2,3
-ab1[2,:] = a1
-ab1[1,1] = 1
-ab1
 configs1 = [1 120; 0.8 150; 0.6 200; 0.5 240; 0.3 400; 0.2 600; 0.1 1200; 0.08 1500; 0.06 2000; 0.05 2400; 0.03 4000; 0.02 6000; 0.01 12000]
+
+for i=1:7
+    m = configs1[i,1]
+    n_tau = configs1[i,2]
+    main(n_tau,"expfullB100S0_$(i).csv","measuredObsB100S0_$(i).csv","expectationvalB100S0_$(i).csv",m,m)
+end
+
+
+
 # configs1[1,2]
 main(120,"expfullB1.csv","measuredObsB1.csv","expectationvalB1.csv",1,1)
 twopoint=[]
@@ -297,38 +293,9 @@ begin
 end
 expected_x4 = 3*Exp_x2(120, m, ω)^2
 
-begin
-    PlotProbDD("results/measuredObsb.csv")
-    PlotProbDDe(m,ω,1)
-end
-
-LastRowFromFile("results/measuredObsA14.csv")
-LastRowFromFile("results/measuredObsA13.csv")
-
-LastRowFromFile("results/expfullA14.csv")
-LastRowFromFile("results/expfullA13.csv")
-plot!(LastRowFromFile("results/expfullA13.csv")[2:120+1])
-
-@time for i=1:10000
-    writec123tofile("Benchmarks/","old.csv",[i for i=1:1000],i)
-end
 
 
 
-
-
-
-#############################
-#       AutoCorrelation     #
-#############################
-data = GetColumn(2,"results/measuredObsa7.csv")
-# LastRowFromFile("results/measuredObs.csv")
-autocorrdata = StatsBase.autocor(data,[i for i=0:length(data)-1];demean=true)
-plot(autocorrdata,title="AutoCorr by StatsBase package")
-
-data2 = append!(copy(data),[0 for i=1:length(data)])
-autocorrdata2 = real.(AutoCorrR(data2))[1:length(data)]
-plot(autocorrdata2,title="AutoCorr by padded data by fourier transform")
 
 
 ###### Plot ⟨xᵢ⟩, ⟨xᵢ²⟩
@@ -341,13 +308,14 @@ plotexpx(n_tau+1, 20)       # corr1
 
 ######### Plot final ⟨xᵢ⟩, and ⟨xᵢ²⟩ #########
 begin
-    plot([0 for i=1:n_tau])
-    lastRow = LastRowFromFile("results/expfull40.csv")
+    lastRow = LastRowFromFile("results/expfullB100S0_1.csv")
     exp3 = [lastRow[i] for i=2:n_tau+1]
-    PlotExp(exp3,3)
-    plot!([expected_x2/2 for i=1:n_tau])
+    PlotExp(exp3,3)         # ⟨x̂ᵢ⟩  (Sim)
     exp3 = [lastRow[i+n_tau] for i=2:n_tau+1]
-    PlotExp(exp3,3)
+    PlotExp(exp3,3)         # ⟨x̂ᵢ²⟩ (Sim)
+    hline!([0])             # ⟨x̂⟩ₐ
+    expected_x2 = Exp_x2(120, 1, 1)
+    hline!([expected_x2/2]) # ⟨x̂²⟩ₐ
 end
 
 
