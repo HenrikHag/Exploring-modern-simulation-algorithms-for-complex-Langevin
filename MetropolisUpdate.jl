@@ -78,21 +78,23 @@ x:          Either the old coord, or the proposed new coord
 ```julia
 return part_of_action_value
 ```"""
-function HO_Action(n_tau, m, ω, Path, coord, x)
+function HO_Action(n_tau, m, ω, a, Path, coord, x)
     # n_p1 = coord % n_tau + 1
     # n_m1 = (coord-2) % n_tau + 1
     # print(n_p1)
     # print(n_m1)
-    return 1/2*m*((Path[((coord)%n_tau)+1]-x)^2
-    + (x-Path[((coord-2+n_tau)%n_tau)+1])^2
+    return 1/2*m*a*(((Path[((coord)%n_tau)+1]-x)/a)^2
+    + ((x-Path[((coord-2+n_tau)%n_tau)+1])/a)^2
     + ω^2*(x)^2)
 end
 # Action(Path,2,Path[2])
 # print(Path[((2-2)%16+1)])
 
-
-
-
+function AHO_Action(n_tau, m, ω, a, λ, Path, coord, x)
+    return 1/2*m*a*(((Path[((coord)%n_tau)+1]-x)/a)^2
+    + ((x-Path[((coord-2+n_tau)%n_tau)+1])/a)^2
+    + ω^2*(x)^2 + 1/4*λ*x^4)
+end
 
 
 #                                   #

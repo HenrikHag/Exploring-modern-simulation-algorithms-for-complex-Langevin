@@ -63,12 +63,15 @@ end
 #                               #
 """Does a metroswipe by testing a change for each element,  
 and adds this new coord weighted by change in action."""
-function MetroSwipe(n_tau, m, ω, h, idrate, rng, Path)
+function MetroSwipe(n_tau, m, ω, λ, a, h, idrate, rng, Path)
     accept = 0
+    # λ = 0.1
     for i = 1:n_tau
         x_new = Path[i] + h*2*(rand(rng)-1/2)
-        s_old = HO_Action(n_tau, m, ω, Path, i, Path[i])
-        s_new = HO_Action(n_tau, m, ω, Path, i, x_new)
+        # s_old = HO_Action(n_tau, m, ω, a, Path, i, Path[i])
+        # s_new = HO_Action(n_tau, m, ω, a, Path, i, x_new)
+        s_old = AHO_Action(n_tau, m, ω, a, λ, Path, i, Path[i])
+        s_new = AHO_Action(n_tau, m, ω, a, λ, Path, i, x_new)
         # printf("s_old: %f, s_new: %f\n", s_old, s_new)
         if rand(rng) < exp(s_old-s_new)
             Path[i] = x_new
@@ -173,7 +176,7 @@ function SimMetro(n_tau,meanfname,obsfname)
 end
 
 
-function main(n_tau,meanfname,obsfname,expfname,m,ω)
+function main(n_tau,meanfname,obsfname,expfname,m,ω,a,λ)
     # Logic of program should go here
     # We want to print final expectation values
     # rng = MersenneTwister(11111)
@@ -183,9 +186,9 @@ function main(n_tau,meanfname,obsfname,expfname,m,ω)
     # sum1 = zeros(n_tau); sum2 = zeros(n_tau); sum3 = zeros(n_tau)
     exp_x, exp_x2, exp_x0x1 = zeros(n_tau), zeros(n_tau), zeros(n_tau)
     sum1, sum2, sum3 = zeros(n_tau), zeros(n_tau), zeros(n_tau)
-    n_burn = 100
-    n_skip = 1#n_tau/10#12
-    n_total = n_burn + 1 + (n_skip)*1000#20000#200100
+    n_burn = 2500
+    n_skip = 50#n_tau/10#12
+    n_total = n_burn + 1 + (n_skip)*15000#20000#200100
     accept = 0
     idrate = 0.8
     h = 1
@@ -202,7 +205,7 @@ function main(n_tau,meanfname,obsfname,expfname,m,ω)
     Randlist = []
     # Do n_total swipes, removing n_burn first swipes       #
     a = @timed for i = 1:n_total
-        Path, accept, h = MetroSwipe(n_tau, m, ω, h, idrate, rng, Path)
+        Path, accept, h = MetroSwipe(n_tau, m, ω, λ, a, h, idrate, rng, Path)
         if i > n_burn
             if n_skip == 0 || (i-1-n_burn)%n_skip == 0
                 sum1, sum2, sum3 = MeasureObs(n_tau, sum1, sum2, sum3, Path)
@@ -233,13 +236,20 @@ end
 ####################### main end ##########################################
 
 configs1 = [1 120; 0.8 150; 0.6 200; 0.5 240; 0.3 400; 0.2 600; 0.1 1200; 0.08 1500; 0.06 2000; 0.05 2400; 0.03 4000; 0.02 6000; 0.01 12000]
-
+configs1 = [1 10 16; 1 0.5 16; 1 0.25 16]
+for i=1:1
+    m = configs1[i,1]
+    β = configs1[i,2]
+    n_tau = configs1[i,3]
+    a = β/n_tau
+    λ = 0
+    main(n_tau,"expfullHO_10_$(i).csv","measuredObsHO_10_$(i).csv","expectationvalHO_10_$(i).csv",m,m,a,λ)
+end
 for i=1:7
     m = configs1[i,1]
     n_tau = configs1[i,2]
-    main(n_tau,"expfullB100S0_$(i).csv","measuredObsB100S0_$(i).csv","expectationvalB100S0_$(i).csv",m,m)
+    main(n_tau,"expfullAHO$(i).csv","measuredObsAHO$(i).csv","expectationvalAHO$(i).csv",m,m,a,0)
 end
-
 
 
 # configs1[1,2]
