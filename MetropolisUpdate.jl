@@ -65,7 +65,13 @@ function AutoCorrR(arrayC)
     e1 = autoCorr[1]
     return (autoCorr)./e1
 end
-
+function AutoCorrR(matrixC::AbstractMatrix)
+    CorrD=Matrix{Float64}(undef,length(matrixC[1,:]),length(matrixC[:,1]))
+    for i=1:length(matrixC[1,:])
+        CorrD[i,:]=real.(AutoCorrR(append!(matrixC[:,i],[0 for i=0:length(matrixC[:,1])])))[1:length(matrixC[:,1])]
+    end
+    return CorrD
+end
 
 #                       #
 # Defining the action   #

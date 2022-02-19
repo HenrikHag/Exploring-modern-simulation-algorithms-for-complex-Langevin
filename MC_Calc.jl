@@ -1,5 +1,6 @@
 begin
     using .UsersGuide
+    using .MetropolisUpdate
     using Plots
     using BenchmarkTools
     using StatsBase
@@ -30,18 +31,26 @@ function PlotAC(filename,leng)
     plot(jkf1[:,1],yerr=jkf1[:,2],title="AutoCorr by StatsBase package")
 end
 
-PlotAC(measf,)
+PlotAC(measf,100000)
+
 data1 = GetData(measf,4,1)
 autocorrdata = Matrix{Float64}(undef,length(data1[1,:]),length(data1[:,1]))
 for i = 1:length(data1[1,:])
     autocorrdata[i,:] = StatsBase.autocor(data1[:,i],[i for i=0:length(data1[:,1])-1];demean=true)
 end
+autocorrdata
+plot(autocorrdata[1,:],title="AutoCorr by StatsBase package")
+sbAjk = Jackknife1(autocorrdata)
+plot(sbAjk[:,1],yerr=sbAjk[:,2])
 
-plot(autocorrdata[:,1],title="AutoCorr by StatsBase package")
-
-data2 = append!(copy(data1),[0 for i=1:length(data1)])
-autocorrdata2 = real.(AutoCorrR(data2))[1:length(data)]
-plot(autocorrdata2,title="AutoCorr by padded data by fourier transform")
+#                       #
+#       AutoCorrR       #
+#                       #
+data2 = copy(data1)
+autocorrdata2 = AutoCorrR(data2)#[1:length(data2[:,1])]
+# plot(autocorrdata2[1,:])
+autocorrdataJK2 = Jackknife1(autocorrdata2)
+plot(autocorrdataJK2[:,1],yerr=autocorrdataJK2[:,2],title="AutoCorr by padded data by fourier transform")
 
 
 
@@ -70,7 +79,7 @@ end
 twopointD = GetTwoPointData(measf)
 # @benchmark Jackknife1(twopointD)
 jfd = Jackknife1(twopointD)
-    plot(jfd[1:100,1],yerr=jfd[1:100,2],yrange=[1.4*10^-3,10^2],yaxis=:log,xlabel="Δτ",ylabel="G(Δτ)")
+    plot(jfd[:,1],yerr=jfd[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,xlabel="Δτ",ylabel="G(Δτ)")
 # end
 begin # Naive estimate of error
     erd = Err1(twopointD)
