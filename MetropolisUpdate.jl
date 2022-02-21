@@ -4,7 +4,7 @@ using Random, Printf, Plots, Gnuplot, Statistics, FFTW
 
 export Random, Printf, Plots, Gnuplot
 export n_tau, idrate, h, m, ω, accept, sum1, sum2, sum3
-export Exp_x2, AutoCorrR, HO_Action, MeasureObs, E_Vals#, MeasureObs
+export Exp_x2, AutoCorrR, HO_Action, AHO_Action, MeasureObs, E_Vals#, MeasureObs
 export printarray, writee123tofile, writec123tofile, writec3s3tofile, writes3e3tofile, writeeMean
 export plotexpx, plotexpx1, plotexpx2
 
@@ -54,7 +54,8 @@ end
 
 
 # nrow()
-"""Returns AutoCorrelation of arrayC
+"""Returns AutoCorrelation of arrayC.  
+Returns a matrix of correlations → if matrix of configs ↓ is passed.  
 """
 function AutoCorrR(arrayC)
     mean1 = mean(arrayC)

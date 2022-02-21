@@ -175,23 +175,55 @@ function SimMetro(n_tau,meanfname,obsfname)
     return (a.time, b.time)
 end
 
+function PreSim(n_tau, m, ω, λ, a, h, idrate, rng, Path, n_burn, n_skip, accept, runt)
+    h2 = copy(h)
+    Path2 = copy(Path)
+    accept2 = copy(accept)
+    for i=1:n_burn
+        Path, accept, h = MetroSwipe(n_tau, m, ω, λ, a, h, idrate, rng, Path)
+    end
+    configs = Matrix{Float64}(undef,runt,n_tau)
+    for i=1:runt
+        for ii=1:n_skip
+            Path, accept, h = MetroSwipe(n_tau, m, ω, λ, a, h, idrate, rng, Path)
+        end
+        configs[i,:] = Path
+    end
+    return 10*mean(AutoCorrR(configs)[:,2]), accept2, h2, Path2
+end
 
 function main(n_tau,meanfname,obsfname,expfname,m,ω,a,λ)
     # Logic of program should go here
     # We want to print final expectation values
     # rng = MersenneTwister(11111)
     n_tau = Int(n_tau)
-    println("n_tau = ",n_tau,", m,ω = ", m,", ",ω)
+    println("\nn_tau = ",n_tau,", m,ω = ", m,", ",ω)
     Path = zeros(n_tau)
     # sum1 = zeros(n_tau); sum2 = zeros(n_tau); sum3 = zeros(n_tau)
     exp_x, exp_x2, exp_x0x1 = zeros(n_tau), zeros(n_tau), zeros(n_tau)
     sum1, sum2, sum3 = zeros(n_tau), zeros(n_tau), zeros(n_tau)
     n_burn = 2500
     n_skip = 50#n_tau/10#12
-    n_total = n_burn + 1 + (n_skip)*15000#20000#200100
     accept = 0
     idrate = 0.8
     h = 1
+    #                                   #
+    # Make autocorrelation negligible   #
+    #                                   #
+    while true
+        runt = 200
+        ato2, accept, h, Path = PreSim(n_tau, m, ω, λ, a, h, idrate, rng, Path, n_burn, n_skip, accept, runt)
+        if ato2 > 2
+            println("Autocorrelation after $(runt) runs show Aₒ(1)= $(ato2/10)")
+            println("Increasing n_skip from: $(n_skip) to $(round(n_skip*ato2))\n")
+            n_skip *= round(ato2)
+        else
+            println("Autocorrelation after $(runt) runs show Aₒ(1)= $(ato2)")
+            break
+        end
+    end
+    n_total = n_burn + 1 + (n_skip)*15000#20000#200100
+    # Path = zeros(n_tau)
     #                               #
     # Prepare writing to file       #
     #                               #
@@ -236,14 +268,14 @@ end
 ####################### main end ##########################################
 
 configs1 = [1 120; 0.8 150; 0.6 200; 0.5 240; 0.3 400; 0.2 600; 0.1 1200; 0.08 1500; 0.06 2000; 0.05 2400; 0.03 4000; 0.02 6000; 0.01 12000]
-configs1 = [1 10 16; 1 0.5 16; 1 0.25 16]
-for i=1:1
+configs1 = [1 1 16; 1 4 16; 1 8 16; 1 16 16]
+for i=1:4
     m = configs1[i,1]
     β = configs1[i,2]
     n_tau = configs1[i,3]
     a = β/n_tau
     λ = 0
-    main(n_tau,"expfullHO_10_$(i).csv","measuredObsHO_10_$(i).csv","expectationvalHO_10_$(i).csv",m,m,a,λ)
+    main(n_tau,"expfullHO_1_β$(β)_16.csv","measuredObsHO_1_β$(β)_16.csv","expectationvalHO_1_β$(β)_16.csv",m,m,a,λ)
 end
 for i=1:7
     m = configs1[i,1]

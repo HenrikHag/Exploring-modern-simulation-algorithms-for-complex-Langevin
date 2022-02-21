@@ -4,10 +4,11 @@ begin
     using Plots
     using BenchmarkTools
     using StatsBase
-
+    using DataFrames
+    using GLM
 end
 # 
-measf = "results/measuredObsHO_10_1.csv"#"results/measuredObsB100S0_7.csv"
+measf = "results/measuredObsHO_1_β16_16.csv"#"results/measuredObsB100S0_7.csv"
 expf = "results/expfullHO_10_1.csv"
 
 #                                               #
@@ -28,10 +29,18 @@ function PlotAC(filename,leng)
     end
     autocorrdata = transpose(StatsBase.autocor(data1,[i for i=0:leng-1]))
     jkf1 = Jackknife1(autocorrdata)
+    jkf1[:,1]
     plot(jkf1[:,1],yerr=jkf1[:,2],title="AutoCorr by StatsBase package")
 end
 
-PlotAC(measf,100000)
+# PlotAC(measf,100000)
+
+######
+for i in ["results/measuredObsHO_1_β1_16.csv","results/measuredObsHO_1_β4_16.csv","results/measuredObsHO_1_β8_16.csv","results/measuredObsHO_1_β16_16.csv"]
+    display(PlotAC(i,100000))
+end
+######
+fill
 
 data1 = GetData(measf,4,1)
 autocorrdata = Matrix{Float64}(undef,length(data1[1,:]),length(data1[:,1]))
@@ -42,6 +51,7 @@ autocorrdata
 plot(autocorrdata[1,:],title="AutoCorr by StatsBase package")
 sbAjk = Jackknife1(autocorrdata)
 plot(sbAjk[:,1],yerr=sbAjk[:,2])
+sbAjk[1:5,1]
 
 #                       #
 #       AutoCorrR       #
@@ -68,7 +78,17 @@ begin
     PlotProbDDe(m,ω,1,2)
 end
 
+######
+for i in ["results/measuredObsHO_1_β1_16.csv","results/measuredObsHO_1_β4_16.csv","results/measuredObsHO_1_β8_16.csv","results/measuredObsHO_1_β16_16.csv"]
+    PlotProbDD(i,0.1)
+    display(PlotProbDDe(1,1,1,2))
+end
+######
 
+for i in [i for i = -1:0.1:1]
+    # println(i)
+    println(cosh(i))
+end
 
 
 #####################################
@@ -87,6 +107,13 @@ begin # Naive estimate of error
 end
 
 # For just the ⟨x₁xᵢ⟩
+
+
+######
+for i in ["results/measuredObsHO_1_β1_16.csv","results/measuredObsHO_1_β4_16.csv","results/measuredObsHO_1_β8_16.csv","results/measuredObsHO_1_β16_16.csv"]
+    display(PlotTPCF(i))
+end
+######
 
 begin # Jackknife estimate of error
     twopointD1 = GetTP1data(measf)
@@ -114,3 +141,4 @@ plot(jkxdat[:,1],yerr=jkxdat[:,2])
 expxData = transpose(GetExpXData(expf,1))
 expxDatawErr = Jackknife1(expxData)
 plot(expxDatawErr[:,1],yerr=expxDatawErr[:,2])
+

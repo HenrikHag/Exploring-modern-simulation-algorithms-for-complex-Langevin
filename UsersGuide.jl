@@ -280,7 +280,7 @@ end
 #                                       #
 function PlotTPCF(filename)
     tpcd = Jackknife1(GetTwoPointData(filename))
-    plot(tpcd[:,1],yerr=tpcd[:,2],title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩")
+    plot(tpcd[:,1],yerr=tpcd[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩")
 end
 
 
