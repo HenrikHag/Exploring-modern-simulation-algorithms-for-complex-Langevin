@@ -21,17 +21,7 @@ expf = "results/expfullHO_10_1.csv"
 
 # data = GetColumn(2,measf)
 # LastRowFromFile("results/measuredObs.csv")
-function PlotAC(filename,leng)
-    data1 = GetData(filename,4,1)
-    if leng > length(data1[:,1])
-        leng = length(data1[:,1])
-        println("PlotAC: Length specified to large, using length(data1[:,1]) = N_meas")
-    end
-    autocorrdata = transpose(StatsBase.autocor(data1,[i for i=0:leng-1]))
-    jkf1 = Jackknife1(autocorrdata)
-    jkf1[:,1]
-    plot(jkf1[:,1],yerr=jkf1[:,2],title="AutoCorr by StatsBase package")
-end
+
 
 # PlotAC(measf,100000)
 
@@ -114,6 +104,7 @@ for i in ["results/measuredObsHO_1_β1_16.csv","results/measuredObsHO_1_β4_16.c
     display(PlotTPCF(i))
 end
 ######
+PlotTPCF("results/measuredObsHO_1_β8_16.csv")
 
 begin # Jackknife estimate of error
     twopointD1 = GetTP1data(measf)

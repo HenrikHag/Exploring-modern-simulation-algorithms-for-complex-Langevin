@@ -1,10 +1,10 @@
 module UsersGuide
 
-using Plots, Statistics
+using Plots, Statistics, StatsBase
 
 export GetColumn, GetData, GetTwoPointData, GetTP1data, GetExpXData, GetLastMean, Err1
 export Jackknife1
-export LastRowFromFile, PlotExp, plot_x, PlotProbDD, PlotProbDDe, PlotTPCF #, PlotTwoPointCorrelation
+export LastRowFromFile, PlotExp, plot_x, PlotProbDD, PlotProbDDe, PlotTPCF, PlotAC
 
 # Creating functions to work on results from User's Guide to M C Methods
 
@@ -280,10 +280,34 @@ end
 #                                       #
 function PlotTPCF(filename)
     tpcd = Jackknife1(GetTwoPointData(filename))
+    tpcr = Err1(GetTwoPointData(filename))
+    println(tpcd[:,1])
+    println(tpcr[:,1])
+    open("results/Twopointdata.csv","a") do file
+        for i = 1:length(tpcd[:,1])
+            write(file,string(i/2-1/2," ",tpcd[i,1]," ",tpcd[i,2],"\n"))
+        end
+    end
     plot(tpcd[:,1],yerr=tpcd[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩")
+    plot!(tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩")
 end
 
 
+
+#                                       #
+#           Auto Correlation            #
+#                                       #
+function PlotAC(filename,leng)
+    data1 = GetData(filename,4,1)
+    if leng > length(data1[:,1])
+        leng = length(data1[:,1])
+        println("PlotAC: Length specified to large, using length(data1[:,1]) = N_meas")
+    end
+    autocorrdata = transpose(StatsBase.autocor(data1,[i for i=0:leng-1]))
+    jkf1 = Jackknife1(autocorrdata)
+    jkf1[:,1]
+    plot(jkf1[:,1],yerr=jkf1[:,2],title="AutoCorr by StatsBase package")
+end
 
 
 end
