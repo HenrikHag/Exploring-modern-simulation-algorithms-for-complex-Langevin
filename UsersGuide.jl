@@ -127,12 +127,12 @@ Pass a matrix to calculate mean and error for each column
 """
 function Err1(array1::AbstractArray)
     mean1 = mean(array1)
-    err1 = 0
-    for i=1:length(array1)
-        err1 += (array1[i]-mean1)^2
-    end
+    err1 = sum((array1.-mean1).^2)
+    # for i=1:length(array1)
+    #     err1 += (array1[i]-mean1)^2
+    # end
     err1 /= length(array1)*(length(array1)-1)
-    return [mean(array1), err1]#std(array1)/√length(array1)] #  √(var(array1)/length(array1)),
+    return [mean(array1), √(err1)]#std(array1)/√length(array1)] #  √(var(array1)/length(array1)),
 end
 function Err1(matrix1::AbstractMatrix)
     err1 = Matrix{Float64}(undef,length(matrix1[1,:]),2)
@@ -153,14 +153,14 @@ function Jackknife1(array1::AbstractArray)
         append!(jf,mean(append!(array1[1:i-1],array1[(i+1):length(array1)])))
     end
     append!(jf,mean(array1[1:length(array1)-1]))
-    jf = jf.-mean(jf)
+    jf = jf.-mean(array1)
     jf = jf.^2
     jfvm = mean(jf)
     # jfvm = 0
     # for i=1:length(jf)
     #     jfvm += (jf[i]-mean(jf))^2
     # end
-    jfvm *= (length(jf)-1)#/length(jf)
+    jfvm *= (length(array1)-1)#/length(jf)
     # println("Done")
     return [mean(array1),√(jfvm)]
 end
@@ -281,13 +281,13 @@ end
 function PlotTPCF(filename)
     tpcd = Jackknife1(GetTwoPointData(filename))
     tpcr = Err1(GetTwoPointData(filename))
-    println(tpcd[:,1])
-    println(tpcr[:,1])
-    open("results/Twopointdata.csv","a") do file
-        for i = 1:length(tpcd[:,1])
-            write(file,string(i/2-1/2," ",tpcd[i,1]," ",tpcd[i,2],"\n"))
-        end
-    end
+    println(tpcd[:,2])
+    println(tpcr[:,2])
+    # open("results/Twopointdata.csv","a") do file
+    #     for i = 1:length(tpcd[:,1])
+    #         write(file,string(i/2-1/2," ",tpcd[i,1]," ",tpcd[i,2],"\n"))
+    #     end
+    # end
     plot(tpcd[:,1],yerr=tpcd[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩")
     plot!(tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩")
 end
