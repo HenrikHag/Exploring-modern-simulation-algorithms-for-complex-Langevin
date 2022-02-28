@@ -280,16 +280,17 @@ end
 #                                       #
 function PlotTPCF(filename)
     tpcd = Jackknife1(GetTwoPointData(filename))
-    tpcr = Err1(GetTwoPointData(filename))
-    println(tpcd[:,2])
-    println(tpcr[:,2])
+    #tpcr = Err1(GetTwoPointData(filename))
+    # println(tpcd[:,1])
+    #println(tpcr[:,2])
     # open("results/Twopointdata.csv","a") do file
     #     for i = 1:length(tpcd[:,1])
     #         write(file,string(i/2-1/2," ",tpcd[i,1]," ",tpcd[i,2],"\n"))
     #     end
     # end
-    plot(tpcd[:,1],yerr=tpcd[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩")
-    plot!(tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩")
+    display(plot(tpcd[:,1],yerr=tpcd[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩"))
+    # plot!(tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩")
+    return tpcd
 end
 
 
