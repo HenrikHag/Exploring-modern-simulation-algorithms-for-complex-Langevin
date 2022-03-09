@@ -218,7 +218,7 @@ function main(n_tau,meanfname,obsfname,expfname,m,ω,a,λ)
             println("Increasing n_skip from: $(n_skip) to $(round(n_skip*ato2))\n")
             n_skip *= round(ato2)
         else
-            println("Autocorrelation after $(runt) runs show Aₒ(1)= $(ato2)")
+            println("Autocorrelation after $(runt) runs show Aₒ(1)= $(ato2/10)")
             break
         end
     end

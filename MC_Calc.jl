@@ -8,7 +8,7 @@ begin
     using GLM
 end
 # 
-measf = "results/measuredObsHO_1_β16_16.csv"#"results/measuredObsB100S0_7.csv"
+measf = "results/measuredObsHO_1_β8_16.csv"#"results/measuredObsB100S0_7.csv"
 expf = "results/expfullHO_10_1.csv"
 
 #                                               #
@@ -89,12 +89,38 @@ end
 twopointD = GetTwoPointData(measf)
 # @benchmark Jackknife1(twopointD)
 jfd = Jackknife1(twopointD)
-    plot(jfd[:,1],yerr=jfd[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,xlabel="Δτ",ylabel="G(Δτ)")
+plot(jfd[:,1],yerr=jfd[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,xlabel="Δτ",ylabel="G(Δτ)")
 # end
 begin # Naive estimate of error
     erd = Err1(twopointD)
-    plot(erd[1:100,1],yerr=erd[1:100,2],yrange=[1.4*10^-3,10^2],yaxis=:log,xlabel="Δτ",ylabel="G(Δτ)")
+    plot(erd[:,1],yerr=erd[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,xlabel="Δτ",ylabel="G(Δτ)")
 end
+
+function EffMean(array1::AbstractVector)
+    effmean = Array{Float64}(undef,0)
+    for i=2:length(array1)-1
+        append!(effmean,1/2*log10(array1[i-1]/array1[i+1]))
+    end
+    display(plot(effmean))
+    return effmean
+end
+function EffMean(array1::AbstractMatrix)
+    effmean = Matrix{Float64}(undef,length(array1[:,1])-2,2)
+    for i=2:length(array1[:,1])-1
+        efm = 1/2*log10(array1[i-1,1]/array1[i+1,1])
+        effmean[i-1,1] = efm
+        effmean[i-1,2] = max(
+            1/2*log10((abs(array1[i-1,1])+array1[i-1,2])/(abs(array1[i+1,1])-array1[i+1,2]))-efm,
+            efm-1/2*log10((abs(array1[i-1,1])-array1[i-1,2])/(abs(array1[i+1,1])+array1[i+1,2]))
+            )
+        # println(1/2*log10((abs(array1[i-1,1])+array1[i-1,2])/(abs(array1[3,2])-array1[3,2]))-1/2*log10(array1[1,1]/array1[3,1]))
+        # effmean[i-1,2] = (abs(array1[i-1,1])-array1[i-1,2])/(abs(array1[i+1,2])+array1[i+1,2])-effmean[i-1,1]#1/2*log10()
+    end
+    display(plot(effmean[:,1],yerr=effmean[:,2]))
+    return effmean
+end
+tpcd = PlotTPCF(measf)
+EffMean(tpcd)
 
 # For just the ⟨x₁xᵢ⟩
 
