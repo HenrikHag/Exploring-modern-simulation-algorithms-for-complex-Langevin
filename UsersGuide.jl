@@ -298,6 +298,26 @@ end
 #                                       #
 #           Auto Correlation            #
 #                                       #
+function PlotAC(filename)
+    data1 = GetData(filename,4,1)
+    leng = length(data1[:,1])
+    autocorrdata = transpose(StatsBase.autocor(data1,[i for i=0:leng-1]))
+    jkf1 = Jackknife1(autocorrdata)
+    jkf1[:,1]
+    plot(jkf1[:,1],yerr=jkf1[:,2],title="AutoCorr by StatsBase package")
+end
+function PlotAC(filename,fullLength::Bool)
+    data1 = GetData(filename,4,1)
+    if fullLength
+        leng = length(data1[:,1])
+        autocorrdata = transpose(StatsBase.autocor(data1,[i for i=0:leng-1]))
+    else
+        autocorrdata = transpose(StatsBase.autocor(data1))
+    end
+    jkf1 = Jackknife1(autocorrdata)
+    jkf1[:,1]
+    plot(jkf1[:,1],yerr=jkf1[:,2],title="AutoCorr by StatsBase package")
+end
 function PlotAC(filename,leng)
     data1 = GetData(filename,4,1)
     if leng > length(data1[:,1])
