@@ -1,10 +1,11 @@
 module UsersGuide
 
 using Plots, Statistics, StatsBase
+using Main.MetropolisUpdate
 
 export GetColumn, GetData, GetTwoPointData, GetTP1data, GetExpXData, GetLastMean, Err1
 export Jackknife1
-export LastRowFromFile, PlotExp, plot_x, PlotProbDD, PlotProbDDe, PlotTPCF, PlotAC
+export LastRowFromFile, PlotExp, plot_x, PlotProbDD, PlotProbDDe, PlotTPCF, PlotAC, PlotACsb
 
 # Creating functions to work on results from User's Guide to M C Methods
 
@@ -300,13 +301,44 @@ end
 #                                       #
 function PlotAC(filename)
     data1 = GetData(filename,4,1)
+    autocorrdata = AutoCorrR(data1)
+    jkf1 = Jackknife1(autocorrdata)
+    jkf1[:,1]
+    plot(jkf1[:,1],yerr=jkf1[:,2],title="AutoCorrelation",xlabel="τ",ylabel="Aₒ(τ)")
+end
+function PlotAC(filename,fullLength::Bool)
+    data1 = GetData(filename,4,1)
+    if fullLength
+        autocorrdata = AutoCorrR(data1)
+    else
+        leng = 200
+        autocorrdata = AutoCorrR(data1)[:,1:leng]
+    end
+    jkf1 = Jackknife1(autocorrdata)
+    jkf1[:,1]
+    plot(jkf1[:,1],yerr=jkf1[:,2],title="AutoCorrelation",xlabel="τ",ylabel="Aₒ(τ)")
+end
+function PlotAC(filename,leng)
+    data1 = GetData(filename,4,1)
+    if leng > length(data1[:,1])
+        leng = length(data1[:,1])
+        println("PlotAC: Length specified to large, using length(data1[:,1]) = N_meas")
+    end
+    autocorrdata = AutoCorrR(data1)[:,1:leng]
+    jkf1 = Jackknife1(autocorrdata)
+    jkf1[:,1]
+    plot(jkf1[:,1],yerr=jkf1[:,2],title="AutoCorrelation",xlabel="τ",ylabel="Aₒ(τ)")
+end
+
+function PlotACsb(filename)
+    data1 = GetData(filename,4,1)
     leng = length(data1[:,1])
     autocorrdata = transpose(StatsBase.autocor(data1,[i for i=0:leng-1]))
     jkf1 = Jackknife1(autocorrdata)
     jkf1[:,1]
-    plot(jkf1[:,1],yerr=jkf1[:,2],title="AutoCorr by StatsBase package")
+    plot(jkf1[:,1],yerr=jkf1[:,2],title="AutoCorr by StatsBase package",xlabel="τ",ylabel="Aₒ(τ)")
 end
-function PlotAC(filename,fullLength::Bool)
+function PlotACsb(filename,fullLength::Bool)
     data1 = GetData(filename,4,1)
     if fullLength
         leng = length(data1[:,1])
@@ -316,9 +348,9 @@ function PlotAC(filename,fullLength::Bool)
     end
     jkf1 = Jackknife1(autocorrdata)
     jkf1[:,1]
-    plot(jkf1[:,1],yerr=jkf1[:,2],title="AutoCorr by StatsBase package")
+    plot(jkf1[:,1],yerr=jkf1[:,2],title="AutoCorr by StatsBase package",xlabel="τ",ylabel="Aₒ(τ)")
 end
-function PlotAC(filename,leng)
+function PlotACsb(filename,leng)
     data1 = GetData(filename,4,1)
     if leng > length(data1[:,1])
         leng = length(data1[:,1])
@@ -327,7 +359,7 @@ function PlotAC(filename,leng)
     autocorrdata = transpose(StatsBase.autocor(data1,[i for i=0:leng-1]))
     jkf1 = Jackknife1(autocorrdata)
     jkf1[:,1]
-    plot(jkf1[:,1],yerr=jkf1[:,2],title="AutoCorr by StatsBase package")
+    plot(jkf1[:,1],yerr=jkf1[:,2],title="AutoCorr by StatsBase package",xlabel="τ",ylabel="Aₒ(τ)")
 end
 
 

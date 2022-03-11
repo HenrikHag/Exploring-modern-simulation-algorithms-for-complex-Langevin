@@ -37,10 +37,29 @@ function Langevin(N,mu,la,gaussianD,filename)
         open(string(path,filename),"a") do file
             # write(file,"exp_x,exp_x2,exp_x0x1\n")
             write(file,string(Int64(i),","))
-            for ii = 1:length(F)-1
+            pathl=length(F)
+            for ii = 1:pathl
                 write(file,string(F[ii],","))
             end
-            write(file,string(F[end],"\n"))
+            # write(file,string(F[end],"\n"))
+            for ii = 1:pathl         # Path.^2
+                write(file,string(F[ii]^2,","))
+            end
+            for ii = 1:pathl         # Path_1*Path_i
+                write(file,string(F[1]*F[ii],","))
+            end
+            for ii = 0:pathl-2       # Two-Point Correlation
+                twopointcorr=0
+                for iii=1:pathl
+                    twopointcorr += F[iii]*F[(iii+ii-1)%pathl+1]
+                end
+                write(file,string(twopointcorr/pathl,","))
+            end
+            twopointcorr=0
+            for ii=1:pathl
+                twopointcorr += F[ii]*F[(ii+pathl-2)%pathl+1]
+            end
+            write(file,string(twopointcorr/pathl,"\n"))
         end
         for ii = 1:length(F)
             F[ii] += Action(mu,la,F[ii],dt) + sqrt(2*dt)*rand(gaussianD)
@@ -60,4 +79,25 @@ PlotProbDDe(1/2,1,1,3)
 plot(reshape(GetColumn(2,"results/CL_1.csv"),:))#:Int((length(LastRowFromFile(file))-1)/4)+1
 # Autocorrelation
 PlotAC("results/CL_1.csv",1000)
+PlotACsb("results/CL_1.csv",1000)
 PlotAC("results/CL_1.csv",false)
+PlotAC("results/CL_1.csv",true)
+# Twopoint Correlation
+PlotTPCF("results/CL_1.csv")
+a = [0.990894    0.00115783;
+ -0.0086682   0.000855048;
+  0.00979547  0.000858429;
+ -0.0109495   0.00088357;
+ -0.0096282   0.000881336;
+ -9.15654e-6  0.000868927;
+  0.00361841  0.000861336;
+  0.00736314  0.000860249;
+  0.0157388   0.00113745;
+  0.00736314  0.000860249;
+  0.00361841  0.000861336;
+ -9.15654e-6  0.000868927;
+ -0.0096282   0.000881336;
+ -0.0109495   0.00088357;
+  0.00979547  0.000858429;
+ -0.0086682   0.000855048;]
+ plot(a[:,1],yerr=a[:,2])
