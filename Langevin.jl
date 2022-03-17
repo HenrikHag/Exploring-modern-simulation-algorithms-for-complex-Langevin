@@ -6,7 +6,7 @@ gaussianD = Normal(0,1)
 #       μ/2*ϕ²+λ/4!*ϕ⁴
 #       -> (μϕ+λ/6*ϕ³)*Δt
 function ActionDer(a,m,mu,la,F,f₋₁,f₊₁)
-   return m/a*(F-1/2*(f₋₁+f₊₁)) + mu*F + la/6*F^3
+   return 2*m/a^2*(2*F-(f₋₁+f₊₁)) + m*mu*F + m*la/6*F^3
 end
 # Add cupling terms 2f(i)-f(i+1)-f(i-i)
 # Understand the discretizing integral and meeting mat. from 16.03
