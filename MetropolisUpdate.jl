@@ -222,13 +222,13 @@ function writec123tofile(path, filename, Path, itt)
             for ii=1:pathl
                 twopointcorr += Path[ii]*Path[(ii+i-1)%pathl+1]
             end
-            write(file,string(twopointcorr/length(Path),","))
+            write(file,string(twopointcorr/pathl,","))
         end
         twopointcorr=0
         for ii=1:pathl
             twopointcorr += Path[ii]*Path[(ii+pathl-2)%pathl+1]
         end
-        write(file,string(twopointcorr/length(Path),"\n"))
+        write(file,string(twopointcorr/pathl,"\n"))
     end
 end
 

@@ -280,19 +280,41 @@ end
 #         Two-Point Correlation         #
 #                                       #
 function PlotTPCF(filename)
-    tpcd = Jackknife1(GetTwoPointData(filename))
-    #tpcr = Err1(GetTwoPointData(filename))
-    # println(tpcd[:,1])
-    #println(tpcr[:,2])
+    tpcr = Err1(GetTwoPointData(filename))
+    display(plot(tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩"))
+    # plot!(tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩")
+    return tpcr
+end
+function PlotTPCF(filename,logplot=true)
+    tpcr = Err1(GetTwoPointData(filename))
+    if logplot
+        display(plot(tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩"))
+    else
+        display(plot(tpcr[:,1],yerr=tpcr[:,2],title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩"))
+    end
+    # plot!(tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩")
+    return tpcr
+end
+function PlotTPCF(filename,Jackknife::Bool,logplot=true)
+    if Jackknife
+        tpcr = Jackknife1(GetTwoPointData(filename))
+    else
+        tpcr = Err1(GetTwoPointData(filename))
+    end
+    # println(tpcr[:,1])
+    if logplot
+        display(plot(tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩"))
+    else
+        display(plot(tpcr[:,1],yerr=tpcr[:,2],title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩"))
+    end
     # open("results/Twopointdata.csv","a") do file
-    #     for i = 1:length(tpcd[:,1])
-    #         write(file,string(i/2-1/2," ",tpcd[i,1]," ",tpcd[i,2],"\n"))
+    #     for i = 1:length(tpcr[:,1])
+    #         write(file,string(i/2-1/2," ",tpcr[i,1]," ",tpcr[i,2],"\n"))
     #     end
     # end
-    display(plot(tpcd[:,1],yerr=tpcd[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩"))
-    # plot!(tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩")
-    return tpcd
+    return tpcr
 end
+
 
 
 
