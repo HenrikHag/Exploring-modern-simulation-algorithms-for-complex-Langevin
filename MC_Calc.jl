@@ -84,6 +84,20 @@ end
 #####################################
 #   Two-Point Correlation Function  #
 #####################################
+# Naive error
+PlotTPCF(measf)
+PlotTPCF(measf)
+
+# Jackknife error
+PlotTPCF(measf,true)
+PlotTPCF(measf,true)
+
+# Effective Mass(Δτ)
+PlotEffM(measf)
+PlotEffM(measf,true)
+
+
+
 # begin # Jackknife estimate of error
 # @benchmark GetTwoPointData(measf)
 twopointD = GetTwoPointData(measf)
@@ -96,41 +110,13 @@ begin # Naive estimate of error
     plot(erd[:,1],yerr=erd[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,xlabel="Δτ",ylabel="G(Δτ)")
 end
 
-function EffMean(array1::AbstractVector)
-    effmean = Array{Float64}(undef,0)
-    for i=2:length(array1)-1
-        append!(effmean,1/2*log10(array1[i-1]/array1[i+1]))
-    end
-    display(plot(effmean))
-    return effmean
+for i in ["results/measuredObsHO_1_β1_16.csv","results/measuredObsHO_1_β4_16.csv","results/measuredObsHO_1_β8_16.csv","results/measuredObsHO_1_β16_16.csv"]
+    PlotTPCF(i)
 end
-function EffMean(array1::AbstractMatrix)
-    effmean = Matrix{Float64}(undef,length(array1[:,1])-2,2)
-    for i=2:length(array1[:,1])-1
-        efm = 1/2*log10(array1[i-1,1]/array1[i+1,1])
-        effmean[i-1,1] = efm
-        effmean[i-1,2] = max(
-            1/2*log10((abs(array1[i-1,1])+array1[i-1,2])/(abs(array1[i+1,1])-array1[i+1,2]))-efm,
-            efm-1/2*log10((abs(array1[i-1,1])-array1[i-1,2])/(abs(array1[i+1,1])+array1[i+1,2]))
-            )
-        # println(1/2*log10((abs(array1[i-1,1])+array1[i-1,2])/(abs(array1[3,2])-array1[3,2]))-1/2*log10(array1[1,1]/array1[3,1]))
-        # effmean[i-1,2] = (abs(array1[i-1,1])-array1[i-1,2])/(abs(array1[i+1,2])+array1[i+1,2])-effmean[i-1,1]#1/2*log10()
-    end
-    display(plot(effmean[:,1],yerr=effmean[:,2]))
-    return effmean
-end
-tpcd = PlotTPCF(measf)
-EffMean(tpcd)
+PlotTPCF("results/measuredObsHO_1_β8_16.csv")
+
 
 # For just the ⟨x₁xᵢ⟩
-
-
-######
-for i in ["results/measuredObsHO_1_β1_16.csv","results/measuredObsHO_1_β4_16.csv","results/measuredObsHO_1_β8_16.csv","results/measuredObsHO_1_β16_16.csv"]
-    display(PlotTPCF(i))
-end
-######
-PlotTPCF("results/measuredObsHO_1_β8_16.csv")
 
 begin # Jackknife estimate of error
     twopointD1 = GetTP1data(measf)
@@ -142,9 +128,6 @@ begin # Naive estimate of error
     plot(erd1[1:100,1],yerr=erd1[1:100,2].*300,yrange=[1.4*10^-3,10^2],yaxis=:log,xlabel="Δτ",ylabel="G₁(Δτ)")
 end
 
-PlotTPCF(measf)
-# PlotProbDD(measf,0.1)
-
 begin
     plot_x("results/expfulla7.csv",1,[1,3,8,12])
     hline!([0])
@@ -152,6 +135,13 @@ end
 
 jkxdat = Jackknife1(transpose(GetData("results/expfulla7.csv",3,1)))
 plot(jkxdat[:,1],yerr=jkxdat[:,2])
+
+
+
+
+
+
+
 
 
 #   ⟨x̂⟩   #

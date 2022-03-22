@@ -5,7 +5,7 @@ using Main.MetropolisUpdate
 
 export GetColumn, GetData, GetTwoPointData, GetTP1data, GetExpXData, GetLastMean, Err1
 export Jackknife1
-export LastRowFromFile, PlotExp, plot_x, PlotProbDD, PlotProbDDe, PlotTPCF, PlotAC, PlotACsb
+export LastRowFromFile, PlotExp, plot_x, PlotProbDD, PlotProbDDe, PlotTPCF, EffM, PlotEffM, PlotAC, PlotACsb
 
 # Creating functions to work on results from User's Guide to M C Methods
 
@@ -279,6 +279,12 @@ end
 #                                       #
 #         Two-Point Correlation         #
 #                                       #
+"""Returns the TPCF from file"""
+function TPCF(filename)
+    tpcr = Err1(GetTwoPointData(filename))
+    return tpcr
+end
+"""Plots the Two-Point Correlation Function from file"""
 function PlotTPCF(filename)
     tpcr = Err1(GetTwoPointData(filename))
     display(plot(tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩"))
@@ -315,6 +321,52 @@ function PlotTPCF(filename,Jackknife::Bool,logplot=true)
     return tpcr
 end
 
+"""Calculates the effective mass from a two-point correlation function
+"""
+function EffM(array1::AbstractVector)
+    effm = Array{Float64}(undef,0)
+    for i=2:length(array1)-1
+        append!(effm,1/2*log10(array1[i-1]/array1[i+1]))
+    end
+    # display(plot(effm))
+    return effm
+end
+function EffM(array1::AbstractMatrix)
+    effm = Matrix{Float64}(undef,length(array1[:,1])-2,2)
+    for i=2:length(array1[:,1])-1
+        efm = 1/2*log10(array1[i-1,1]/array1[i+1,1])
+        effm[i-1,1] = efm
+        effm[i-1,2] = max(
+            1/2*log10((abs(array1[i-1,1])+array1[i-1,2])/(abs(array1[i+1,1])-array1[i+1,2]))-efm,
+            efm-1/2*log10((abs(array1[i-1,1])-array1[i-1,2])/(abs(array1[i+1,1])+array1[i+1,2]))
+            )
+        # println(1/2*log10((abs(array1[i-1,1])+array1[i-1,2])/(abs(array1[3,2])-array1[3,2]))-1/2*log10(array1[1,1]/array1[3,1]))
+        # effm[i-1,2] = (abs(array1[i-1,1])-array1[i-1,2])/(abs(array1[i+1,2])+array1[i+1,2])-effm[i-1,1]#1/2*log10()
+    end
+    # display(plot(effm[:,1],yerr=effm[:,2]))
+    return effm
+end
+function PlotEffM(filename)
+    tpcr = Err1(GetTwoPointData(filename))
+    effm = EffM(tpcr)
+    # effm = Matrix{Float64}(undef,length(tpcr[:,1])-2,1)
+    # for i=2:length(tpcr[:,1])-1
+    #     effm[i-1,1] = log10(tpcr[i-1,1]/tpcr[i+1,1])
+    # end
+    # effm./2
+    display(plot(effm[:,1],yerr=effm[:,2],xlabel="Δτ",ylabel="EffM(Δτ)"))
+    return effm
+end
+function PlotEffM(filename,Jackknife::Bool)
+    if Jackknife
+        tpcr = Jackknife1(GetTwoPointData(filename))
+    else
+        tpcr = Err1(GetTwoPointData(filename))
+    end
+    effm = EffM(tpcr)
+    display(plot(effm[:,1],yerr=effm[:,2],xlabel="Δτ",ylabel="EffM(Δτ)"))
+    return effm
+end
 
 
 
