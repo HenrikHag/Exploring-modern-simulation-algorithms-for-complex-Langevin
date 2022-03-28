@@ -287,16 +287,16 @@ end
 """Plots the Two-Point Correlation Function from file"""
 function PlotTPCF(filename)
     tpcr = Err1(GetTwoPointData(filename))
-    display(plot(tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩"))
+    display(plot(tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log, label="⟨x₍ᵢ₊ₓ₎xᵢ⟩",xlabel="Δτ",ylabel="G(Δτ)"))#,title="Two-Point Correlation"
     # plot!(tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩")
     return tpcr
 end
 function PlotTPCF(filename,logplot=true)
     tpcr = Err1(GetTwoPointData(filename))
     if logplot
-        display(plot(tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩"))
+        display(plot(tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩",xlabel="Δτ",ylabel="G(Δτ)"))
     else
-        display(plot(tpcr[:,1],yerr=tpcr[:,2],title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩"))
+        display(plot(tpcr[:,1],yerr=tpcr[:,2],title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩",xlabel="Δτ",ylabel="G(Δτ)"))
     end
     # plot!(tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩")
     return tpcr
@@ -309,9 +309,9 @@ function PlotTPCF(filename,Jackknife::Bool,logplot=true)
     end
     # println(tpcr[:,1])
     if logplot
-        display(plot(tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩"))
+        display(plot(tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩",xlabel="Δτ",ylabel="G(Δτ)"))
     else
-        display(plot(tpcr[:,1],yerr=tpcr[:,2],title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩"))
+        display(plot(tpcr[:,1],yerr=tpcr[:,2],title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩",xlabel="Δτ",ylabel="G(Δτ)"))
     end
     # open("results/Twopointdata.csv","a") do file
     #     for i = 1:length(tpcr[:,1])

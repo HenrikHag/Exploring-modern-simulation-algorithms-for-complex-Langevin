@@ -7,7 +7,7 @@ gaussianD = Normal(0,1)
 #       μ/2*ϕ² + λ/4!*ϕ⁴ + 1/2*m*((P[i+1]-P[i])²+(P[i]-P[i-1])²)/a²+ 
 #       -> (μϕ+λ/6*ϕ³)*Δt
 function ActionDer(a,m,mu,la,F,f₋₁,f₊₁)
-   return 4*m/a*(2*F-(f₋₁+f₊₁)) + a*m*mu*F + a*m*la/6*F^3
+   return m/a*(2*F-(f₋₁+f₊₁)) + a*m*mu*F# + a*m*la/6*F^3
 end
 # Add cupling terms 2f(i)-f(i+1)-f(i-i)
 # Understand the discretizing integral and meeting mat. from 16.03
@@ -16,7 +16,7 @@ function Langevin(N,a,m,mu,la,gaussianD)
     F = [20. for i = 1:16]
     Flist = []
     push!(Flist,F)
-    dt = 0.001
+    dt = 0.01
     for i=1:N
         for ii = 1:length(F)
             F[ii] -= ActionDer(a,m,mu,la,F[ii],F[(ii-2+n_tau)%n_tau+1],F[(ii)%n_tau+1])*dt - sqrt(2*dt)*rand(gaussianD)
@@ -27,7 +27,7 @@ end
 function Langevin(N,a,m,mu,la,gaussianD,filename)
     path = "results/"
     F = [20. for i = 1:16]
-    dt = 0.001
+    dt = 0.01
     n_burn = 3/dt
     n_skip = 3/dt
 
@@ -40,14 +40,18 @@ function Langevin(N,a,m,mu,la,gaussianD,filename)
     show(F);println()
 
     # Simulate
-    for i=1:N
+    t1 = @timed for i=1:N
         writec123tofile(path,filename,F,i)
         for iii = 1:n_skip+1
             for ii = 1:length(F)
                 F[ii] -= ActionDer(a,m,mu,la,F[ii],F[(ii-2+n_tau)%n_tau+1],F[(ii)%n_tau+1])*dt - sqrt(2*dt)*rand(gaussianD)
             end
         end
+        if i%2000==0
+            println(i)
+        end
     end
+    println("t: ",t1.time, " t2:", t1.gctime)
     return
 end
 println()
