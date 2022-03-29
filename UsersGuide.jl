@@ -127,13 +127,14 @@ end
 Pass a matrix to calculate mean and error for each column  
 """
 function Err1(array1::AbstractArray)
-    mean1 = mean(array1)
-    err1 = sum((array1.-mean1).^2)
-    # for i=1:length(array1)
-    #     err1 += (array1[i]-mean1)^2
-    # end
-    err1 /= length(array1)*(length(array1)-1)
-    return [mean(array1), √(err1)]#std(array1)/√length(array1)] #  √(var(array1)/length(array1)),
+    # mean1 = mean(array1)
+    # err1 = sum((array1.-mean1).^2)
+    #     # for i=1:length(array1)
+    #     #     err1 += (array1[i]-mean1)^2
+    #     # end
+    # err1 /= length(array1)*(length(array1)-1)
+    # return [mean(array1), √(err1)]#std(array1)/√length(array1)] #  √(var(array1)/length(array1)),
+    return [mean(array1), std(array1)/√length(array1)]
 end
 function Err1(matrix1::AbstractMatrix)
     err1 = Matrix{Float64}(undef,length(matrix1[1,:]),2)
@@ -149,23 +150,38 @@ end
 If type is matrix it returnes a matrix of results of Jacknife analysis for each column
 """
 function Jackknife1(array1::AbstractArray)
-    jf = [mean(array1[2:length(array1)])]
-    for i=2:length(array1)-1
-        append!(jf,mean(append!(array1[1:i-1],array1[(i+1):length(array1)])))
+    leng1 = length(array1)
+    sum1 = sum(array1)
+    jf = Vector{Float64}(undef,leng1)
+    fill!(jf,sum1)
+    for k = 1:leng1
+        jf[k] -= array1[k]
     end
-    append!(jf,mean(array1[1:length(array1)-1]))
-    jf = jf.-mean(array1)
+    jf = jf./(leng1-1)
+    jf = jf.-sum1/leng1
     jf = jf.^2
     jfvm = mean(jf)
-    # jfvm = 0
-    # for i=1:length(jf)
-    #     jfvm += (jf[i]-mean(jf))^2
-    # end
-    jfvm *= (length(array1)-1)#/length(jf)
-    # println("Done")
+    jfvm *= (length(array1)-1)
     return [mean(array1),√(jfvm)]
 end
-
+function Jackknife1(array1::AbstractArray,binsize::Int)
+    leng1 = length(array1)
+    sum1 = sum(array1)
+    N = Int(floor(Int,leng1/binsize)+1)
+    jf = Vector{Float64}(undef,N)
+    fill!(jf,sum1)
+    for k = 1:N-1
+        for i = 1:binsize
+            jf[k] -= array1[(k-1)*binsize+i]
+        end
+    end
+    jf = jf./(leng1-binsize)
+    jf = jf.-sum1/leng1
+    jf = jf.^2
+    jfvm = mean(jf)
+    jfvm *= (length(array1)-1)
+    return [mean(array1),√(jfvm)]
+end
 function Jackknife1(matrix1::AbstractMatrix)
     jf = Matrix{Float64}(undef,length(matrix1[1,:]),2)
     for i=1:length(matrix1[1,:])

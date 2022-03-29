@@ -237,3 +237,40 @@ end
 @time for i=1:10000
     WritePathToFile("Benchmarks/","new.csv",[i for i=1:16],i)
 end
+
+
+x = AbstractArray{}
+
+#                                   #
+#           Jackknife analysis      #
+#                                   #
+twopointD = GetTwoPointData("results/measuredObsHO_1_β8_16.csv")
+@benchmark Jackknife1(twopointD[:,1])
+@benchmark Err1(twopointD[:,1])
+# @benchmark Jackknife2(twopointD[:,1])
+
+
+
+
+function Jackknifeold(array1::AbstractArray)
+    jf = [mean(array1[2:length(array1)])]
+    for i=2:length(array1)-1
+        append!(jf,mean(append!(array1[1:i-1],array1[(i+1):length(array1)])))
+    end
+    append!(jf,mean(array1[1:length(array1)-1]))
+    jf = jf.-mean(array1)
+    jf = jf.^2
+    jfvm = mean(jf)
+    # jfvm = 0
+    # for i=1:length(jf)
+    #     jfvm += (jf[i]-mean(jf))^2
+    # end
+    jfvm *= (length(array1)-1)#/length(jf)
+    # println("Done")
+    return [mean(array1),√(jfvm)]
+end
+
+Jackknifeold(twopointD[:,1])    # Now named Jackknifeold
+Jackknife1(twopointD[:,1])      # New Jackknife1
+@benchmark Jackknifeold(twopointD[:,1]) # Old Jackknife1
+@benchmark Jackknife1(twopointD[:,1])   # New Jackknife1
