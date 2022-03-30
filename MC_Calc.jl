@@ -23,14 +23,13 @@ expf = "results/expfullHO_10_1.csv"
 # LastRowFromFile("results/measuredObs.csv")
 
 
-# PlotAC(measf,100000)
+PlotAC(measf)
 
 ######
 for i in ["results/measuredObsHO_1_β1_16.csv","results/measuredObsHO_1_β4_16.csv","results/measuredObsHO_1_β8_16.csv","results/measuredObsHO_1_β16_16.csv"]
     display(PlotAC(i,100000))
 end
 ######
-fill
 
 data1 = GetData(measf,4,1)
 autocorrdata = Matrix{Float64}(undef,length(data1[1,:]),length(data1[:,1]))
@@ -59,7 +58,7 @@ plot(autocorrdataJK2[:,1],yerr=autocorrdataJK2[:,2],title="AutoCorr by padded da
 #   Probability Distribution Diagram   #
 ########################################
 
-if true
+begin
     PlotProbDD(measf,0.1)
     PlotProbDDe(1,1,1,2)
 end

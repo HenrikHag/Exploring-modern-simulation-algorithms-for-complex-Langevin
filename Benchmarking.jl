@@ -274,3 +274,18 @@ Jackknifeold(twopointD[:,1])    # Now named Jackknifeold
 Jackknife1(twopointD[:,1])      # New Jackknife1
 @benchmark Jackknifeold(twopointD[:,1]) # Old Jackknife1
 @benchmark Jackknife1(twopointD[:,1])   # New Jackknife1
+
+function Errold(array1::AbstractArray)
+    mean1 = mean(array1)
+    err1 = sum((array1.-mean1).^2)
+    #     # for i=1:length(array1)
+    #     #     err1 += (array1[i]-mean1)^2
+    #     # end
+    err1 /= length(array1)*(length(array1)-1)
+    return [mean(array1), √(err1)]#std(array1)/√length(array1)] #  √(var(array1)/length(array1)),
+end
+
+Errold(twopointD[:,1])    # Now named Errold
+Err1(twopointD[:,1])      # New Err1
+@benchmark Errold(twopointD[:,1]) # Old Err1
+@benchmark Err1(twopointD[:,1])   # New Err1

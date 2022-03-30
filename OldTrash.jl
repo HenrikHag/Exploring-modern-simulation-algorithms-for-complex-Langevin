@@ -506,7 +506,7 @@ end
 
 
 ###### Old AutoCorrelation ######
-autocorrel = AutoCorrelation(n_tau, 500,"results/expfull.csv","results/measuredObs.csv")
+# autocorrel = AutoCorrelation(n_tau, 500,"results/expfull.csv","results/measuredObs.csv")
 plot(autocorrel[:,1])
 begin
     plot([0 for i=1:n_tau-1],legend=:bottom)
@@ -548,3 +548,6 @@ PlotExpE_x(n_tau, meanf, obsf, err)
 ###########################################################################
 
 
+# arr1 = [Langv1[i][j] for i = 1:length(Langv1) for j = 1:length(Langv1[1])]
+# histogram(arr1,normed=true,xlabel="x",ylabel="|ψ_0|²")
+# histogram(Langv1,normed=true,xlabel="x",ylabel="|ψ_0|²")
