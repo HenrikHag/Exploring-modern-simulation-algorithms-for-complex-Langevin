@@ -67,11 +67,22 @@ begin
     Langv1=Langevin(1500,a,1,1,0,gaussianD,"CL_3.csv")
 end
 
+# Langevin expectationvalues
+x1 = Err1(GetData("results/CL_1.csv",4,1))
+x2 = Err1(GetData("results/CL_1.csv",4,2))
+plot(x1[:,1],yerr=x1[:,2])
+plot(x2[:,1],yerr=x2[:,2])
+
+# Metropolis expectationvalues
+x2 = Err1(GetData("results/measuredObsHO_1_β8_16.csv",4,2))
+plot(x2[:,1],yerr=x2[:,2])
+
 
 """Complex and real part of the derivative of the action wrt. ϕ  
 Computed by a Hubbard-Stratonovich transformation."""
 function CActionDer(μ,λ,Fᵣ,Fᵢ)
-    z = λ/12*(Fᵣ + im*Fᵢ) + im*λ/(12μ+2*im*λ*(Fᵣ+im*Fᵢ))
+    z = μ*(Fᵣ+im*Fᵢ)
+    # z = λ/12*(Fᵣ + im*Fᵢ) + im*λ/(12μ+2*im*λ*(Fᵣ+im*Fᵢ))
     return real(z),imag(z)# m/a*(2*Fᵣ-(f₋₁+f₊₁)) + a*m*mu*Fᵣ# + a*m*la/6*Fᵣ^3
 end
 
@@ -85,13 +96,14 @@ end
 
 Weight_func(1,0.4,1,0)
 
+# Compute ⟨ϕ²⟩ = ⟨(ϕ_r + Im*ϕ_i)^2⟩ᵩ
 function CLangevin(N,a,m,mu,la,gaussianD,filename)
     path = "results/"
     # [x₁ʳ,x₂ʳ,...]
     # [x₁ᶜ,x₂ᶜ,...]
     F_r = 0.1 #[20. for i = 1:n_tau]     # n_tau global
     F_i = 0. #[1. for i = 1:n_tau]
-    println("The complex weight starts at: ",Weight_func(mu,la,F_r,F_i))
+    # println("The complex weight starts at: ",Weight_func(mu,la,F_r,F_i))
 
     dt = 0.001
     n_burn = 3/dt
@@ -111,12 +123,12 @@ function CLangevin(N,a,m,mu,la,gaussianD,filename)
 
     Flist_r = []
     Flist_i = []
-    push!(Flist_r,F_r)
-    push!(Flist_i,F_i)
-    WeightP_r = []
-    WeightP_i = []
-    WeightN_r = []
-    WeightN_i = []
+    # push!(Flist_r,F_r)
+    # push!(Flist_i,F_i)
+    # WeightP_r = []
+    # WeightP_i = []
+    # WeightN_r = []
+    # WeightN_i = []
     weight_c = 0# Weight_func(mu,la,F_r,F_i)
     # push!(Weight_r,weight_c[1])
     # push!(Weight_i,weight_c[2])
@@ -126,14 +138,14 @@ function CLangevin(N,a,m,mu,la,gaussianD,filename)
         # writec123tofile(path,filename,F_r,i)
         push!(Flist_r,F_r)
         push!(Flist_i,F_i)
-        weight_c = Weight_func(mu,la,F_r,F_i)
-        if F_r > 0
-            push!(WeightP_r,weight_c[1])
-            push!(WeightP_i,weight_c[2])
-        else
-            push!(WeightN_r,weight_c[1])
-            push!(WeightN_i,weight_c[2])
-        end
+        # weight_c = Weight_func(mu,la,F_r,F_i)
+        # if F_r > 0
+        #     push!(WeightP_r,weight_c[1])
+        #     push!(WeightP_i,weight_c[2])
+        # else
+        #     push!(WeightN_r,weight_c[1])
+        #     push!(WeightN_i,weight_c[2])
+        # end
         for iii = 1:n_skip+1
             for ii = 1:length(F_r)
                 # derAction = CActionDer(a,m,mu,la,F_r[ii],F_r[(ii-2+n_tau)%n_tau+1],F_r[(ii)%n_tau+1,F_c[ii],F_c[(ii-2+n_tau)%n_tau+1],F_c[(ii)%n_tau+1]])
@@ -150,18 +162,35 @@ function CLangevin(N,a,m,mu,la,gaussianD,filename)
         end
     end
     println("t: ",t1.time, " t2:", t1.gctime)
-    return WeightP_r, WeightP_i, WeightN_r, WeightN_i#Flist_r, Flist_i
+    return Flist_r, Flist_i#WeightP_r, WeightP_i, WeightN_r, WeightN_i, 
 end
 
-ComplexSys = CLangevin(2000,0.5,1,1,0.4,gaussianD,"CL_2")
+ComplexSys = CLangevin(20000,0.5,1,1,0.4,gaussianD,"CL_2")
 
-scatter(ComplexSys[3],ComplexSys[4],yrange=[-0.004,0.003],xlabel="Re[ρ]",ylabel="Im[ρ]")
-scatter!(ComplexSys[1],ComplexSys[2])
-
-for i = 1:length(ComplexSys)
-
+# scatter(ComplexSys[3],ComplexSys[4],yrange=[-0.004,0.003],xlabel="Re[ρ]",ylabel="Im[ρ]")
+scatter(ComplexSys[1],ComplexSys[2])
+function getExp2(field_r,field_c)
+    z = []
+    for i = 1:length(field_r)
+        append!(z,(field_r[i]+im*field_c[i])^2)
+    end
+    return Err1(z)
 end
-mean(6/(6*(1+1im)+im*(0.4+1im)*ComplexSys))
+
+# CL expectationvalues = 1 ???
+getExp2(ComplexSys[1],ComplexSys[2])[1]
+arr1 = float.(ComplexSys[1])
+incsize1= 0.1
+histogram(arr1,bins=[i for i=floor(minimum(arr1)*10)/10:incsize1:(floor(maximum(arr1)*10)+1)/10],normed=true,xlabel="x",ylabel="|ψ_0|²")
+
+# mean(ComplexSys[5])
+# mean(ComplexSys[6])
+
+
+# for i = 1:length(ComplexSys)
+
+# end
+# mean(6/(6*(1+1im)+im*(0.4+1im)*ComplexSys))
 
 TwopointE = []
 n_tau = 16
