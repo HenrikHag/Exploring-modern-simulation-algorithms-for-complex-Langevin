@@ -25,6 +25,31 @@ expf = "results/expfullHO_10_1.csv"
 
 PlotAC(measf)
 
+"""Computes the integrated autocorrelationtime from "filename"  
+"""
+function ACI(filename)
+    dat1 = GetData(filename,4,1)
+    autocorrdata = AutoCorrR(dat1)
+    auto1 = Err1(autocorrdata)[:,1]
+    index1 = length(auto1)
+    for i=1:length(auto1)
+        if auto1[i] < 0
+            index1 = i
+            println("First negative value of autocorr at index: ",i)
+            break
+        end
+    end
+    auto1 = auto1[1:index1]
+    acInt = sum(auto1)-auto1[1]
+    # acInt *= (length(auto1)-1)/length(auto1)
+    acInt += 0.5
+    # acInt *= var(dat1)/length(auto1)
+    return acInt#, length(dat1[:,1])
+end
+
+PlotAC("results/measuredObsB1.csv",100)
+ACI("results/measuredObsB1.csv")
+
 ######
 for i in ["results/measuredObsHO_1_β1_16.csv","results/measuredObsHO_1_β4_16.csv","results/measuredObsHO_1_β8_16.csv","results/measuredObsHO_1_β16_16.csv"]
     display(PlotAC(i,100000))
