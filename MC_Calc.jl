@@ -15,6 +15,9 @@ expf = "results/expfullHO_10_1.csv"
 #               Plotting of data                #
 #                                               #
 
+mean(GetData(measf,4,2)[:,1])
+mean(GetData(measf,4,1).^2[:,1])
+
 #############################
 #       AutoCorrelation     #
 #############################

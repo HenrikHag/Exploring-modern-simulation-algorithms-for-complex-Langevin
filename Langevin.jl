@@ -108,7 +108,7 @@ Weight_func(1,0.4,1,0)
 
 # Compute ⟨ϕ²⟩ = ⟨(ϕ_r + Im*ϕ_i)^2⟩ᵩ
 function CLangevin(N,a,m,mu,la,gaussianD,filename)
-    path = "results/"
+    save_path = "results/"
     # [x₁ʳ,x₂ʳ,...]
     # [x₁ᶜ,x₂ᶜ,...]
     F_r = 0.1 #[20. for i = 1:n_tau]     # n_tau global
@@ -177,14 +177,26 @@ function CLangevin(N,a,m,mu,la,gaussianD,filename)
 end
 
 # μ = e^iϕ, ϕ = (0,2π) (+n*2π)
-# ComplexSys = CLangevin(20000,0.5,1,√3/2*im+0.5,0.4,gaussianD,"CL_2")
-ComplexSys = CLangevin(20000,0.5,1,1,0.4,gaussianD,"CL_2")
-for i = 0:0.1:π
-    ComplexSys = CLangevin(20000,0.5,1,exp(i*im),0,gaussianD,"CL_2")
-    display(scatter(ComplexSys[1],ComplexSys[2]))
-    arr1 = float.(ComplexSys[1])
+ComplexSys = CLangevin(20000,0.5,1,0.05*im+1,0,gaussianD,"CL_2")
+# ComplexSys = CLangevin(20000,0.5,1,1,0,gaussianD,"CL_2")
+for i = 0:11
+    if i==0
+        scatter([cos(ii*π/6) for ii=0:11],[sin(ii*π/6) for ii=0:11],color="red",legend=:inside,marker=:x)
+        # scatter([real(exp(-im*ii*π/6)) for ii=0:11],[imag(exp(-im*ii*π/6)) for ii=0:11],color="red",legend=:inside,marker=:x)
+    end
+    ComplexSys = CLangevin(2000,0.5,1,exp(i*im*π/6),0,gaussianD,"CL_2")
+    # display(scatter(ComplexSys[1],ComplexSys[2]))
+    # arr1 = float.(ComplexSys[1])
     println("i: ",i,"e^z:",exp(i*im))
-    display(histogram(arr1,bins=[i for i=floor(minimum(arr1)*10)/10:incsize1:(floor(maximum(arr1)*10)+1)/10],normed=true,xlabel="x",ylabel="|ψ_0|²"))
+    # display(histogram(arr1,bins=[i for i=floor(minimum(arr1)*10)/10:incsize1:(floor(maximum(arr1)*10)+1)/10],normed=true,xlabel="x",ylabel="|ψ_0|²"))
+    arr2 = getExp2(ComplexSys[1],ComplexSys[2])     # ⟨x²⟩
+    if in(i,[0,1,2,10,11])
+        fig1 = scatter!([real(arr2[1])],[imag(arr2[1])],xerr=arr2[2],yerr=arr2[3],color="blue",marker=:cross)
+        display(fig1)
+        if i == 11
+            savefig(fig1,"saved_plots/22.04.21_CL_gauss_mod1.pdf") # This is how to save a Julia plot as pdf !!!
+        end
+    end
 end
 # Diverges to NaN coordinates late in τ time when Re(z) → 0, Im(z) → 1
 # Scatterplot showes values collected moves from only real part to uniform real/complex parts
@@ -194,12 +206,14 @@ end
 # scatter(ComplexSys[3],ComplexSys[4],yrange=[-0.004,0.003],xlabel="Re[ρ]",ylabel="Im[ρ]")
 ComplexSys[1]
 scatter(ComplexSys[1],ComplexSys[2])
+
+# NIntegrate[ x^2*Exp[-(1/2)*m*\[Mu]*x^2 - m*(\[Lambda]/24)*x^4], {x, -\[Infinity], \[Infinity]}]
 function getExp2(field_r,field_c)
     z = []
     for i = 1:length(field_r)
         append!(z,(field_r[i]+im*field_c[i])^2)
     end
-    return Err1(z)
+    return append!([mean(z)], Err1(real.(z))[2], Err1(imag.(z))[2])
 end
 
 
@@ -207,6 +221,7 @@ end
 Err1(ComplexSys[1])                         # ⟨x_r⟩
 Err1(ComplexSys[2])                         # ⟨x_i⟩
 getExp2(ComplexSys[1],ComplexSys[2])[1]     # ⟨x²⟩
+1/(1+0.05*im) #1/μ
 arr1 = float.(ComplexSys[1])
 incsize1= 0.1
 histogram(arr1,bins=[i for i=floor(minimum(arr1)*10)/10:incsize1:(floor(maximum(arr1)*10)+1)/10],normed=true,xlabel="x",ylabel="|ψ_0|²")
