@@ -78,10 +78,19 @@ x2 = Err1(GetData("results/measuredObsHO_1_β8_16.csv",4,2))
 plot(x2[:,1],yerr=x2[:,2])
 
 
+
+
+
+#Computed by a Hubbard-Stratonovich transformation.
+# Instead of doing the HS transformation described in paper [2], 
+#   we just do the mentioned choice of complex μ (or λ).
+# Then the imaginary part drifts as:
+#       ϕᵢⁱ⁺¹ = ϕᵢⁱ - m μ ϕᵢⁱ dt
+# The real and complex parts are decoupled for just the HO, coupling comes from AHO, λ
 """Complex and real part of the derivative of the action wrt. ϕ  
-Computed by a Hubbard-Stratonovich transformation."""
-function CActionDer(μ,λ,Fᵣ,Fᵢ)
-    z = μ*(Fᵣ+im*Fᵢ)
+"""
+function CActionDer(a,m,μ,λ,Fᵣ,Fᵢ)
+    z = m*μ*(Fᵣ+im*Fᵢ) + m*λ/6*(Fᵣ+im*Fᵢ)^3 #+ m/a^2*(2*F-(f₋₁+f₊₁))
     # z = λ/12*(Fᵣ + im*Fᵢ) + im*λ/(12μ+2*im*λ*(Fᵣ+im*Fᵢ))
     return real(z),imag(z)# m/a*(2*Fᵣ-(f₋₁+f₊₁)) + a*m*mu*Fᵣ# + a*m*la/6*Fᵣ^3
 end
@@ -112,7 +121,7 @@ function CLangevin(N,a,m,mu,la,gaussianD,filename)
     # Thermalize
     for i=1:n_burn
         for ii = 1:length(F_r)
-            derAction = CActionDer(mu,la,F_r,F_i)
+            derAction = CActionDer(a, m, mu, la, F_r, F_i)
             F_r -= derAction[1]*dt - sqrt(2*dt)*rand(gaussianD) # N_R = 1 => N_I = 0
             F_i -= derAction[2]*dt
             # F_r[ii] -= derAction[1]*dt - sqrt(2*dt)*rand(gaussianD)
@@ -150,7 +159,7 @@ function CLangevin(N,a,m,mu,la,gaussianD,filename)
             for ii = 1:length(F_r)
                 # derAction = CActionDer(a,m,mu,la,F_r[ii],F_r[(ii-2+n_tau)%n_tau+1],F_r[(ii)%n_tau+1,F_c[ii],F_c[(ii-2+n_tau)%n_tau+1],F_c[(ii)%n_tau+1]])
                 # Possible for hashtable ii -> index in F_r / F_c
-                derAction = CActionDer(mu,la,F_r,F_i)
+                derAction = CActionDer(a, m, mu, la, F_r, F_i)
                 F_r -= derAction[1]*dt - sqrt(2*dt)*rand(gaussianD) # N_R = 1 => N_I = 0
                 F_i -= derAction[2]*dt
                 # F_r[ii] -= derAction[1]*dt - sqrt(2*dt)*rand(gaussianD)
@@ -165,7 +174,8 @@ function CLangevin(N,a,m,mu,la,gaussianD,filename)
     return Flist_r, Flist_i#WeightP_r, WeightP_i, WeightN_r, WeightN_i, 
 end
 
-ComplexSys = CLangevin(20000,0.5,1,1,0.4,gaussianD,"CL_2")
+# μ = e^iϕ, ϕ = (0,2π) (+n*2π)
+ComplexSys = CLangevin(20000,0.5,1,√3/2*im+0.5,0.4,gaussianD,"CL_2")
 
 # scatter(ComplexSys[3],ComplexSys[4],yrange=[-0.004,0.003],xlabel="Re[ρ]",ylabel="Im[ρ]")
 scatter(ComplexSys[1],ComplexSys[2])
@@ -177,11 +187,17 @@ function getExp2(field_r,field_c)
     return Err1(z)
 end
 
+
 # CL expectationvalues = 1 ???
-getExp2(ComplexSys[1],ComplexSys[2])[1]
+Err1(ComplexSys[1])                         # ⟨x_r⟩
+Err1(ComplexSys[2])                         # ⟨x_i⟩
+getExp2(ComplexSys[1],ComplexSys[2])[1]     # ⟨x²⟩
 arr1 = float.(ComplexSys[1])
 incsize1= 0.1
 histogram(arr1,bins=[i for i=floor(minimum(arr1)*10)/10:incsize1:(floor(maximum(arr1)*10)+1)/10],normed=true,xlabel="x",ylabel="|ψ_0|²")
+
+
+
 
 # mean(ComplexSys[5])
 # mean(ComplexSys[6])
