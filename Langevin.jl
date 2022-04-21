@@ -3,6 +3,7 @@ begin
     using Plots
     using .UsersGuide
     using .MetropolisUpdate
+    save_path = "results/"
     gaussianD = Normal(0,1)
 end
 #       a(1/2*m*(P[i+1]-P[i])²/a² + m*μ/2*ϕ² + m*λ/4!*ϕ⁴)
@@ -147,6 +148,7 @@ function CLangevin(N,a,m,mu,la,gaussianD,filename)
         # writec123tofile(path,filename,F_r,i)
         push!(Flist_r,F_r)
         push!(Flist_i,F_i)
+        writec123tofile(save_path,filename,F_r,i)
         # weight_c = Weight_func(mu,la,F_r,F_i)
         # if F_r > 0
         #     push!(WeightP_r,weight_c[1])
@@ -175,9 +177,22 @@ function CLangevin(N,a,m,mu,la,gaussianD,filename)
 end
 
 # μ = e^iϕ, ϕ = (0,2π) (+n*2π)
-ComplexSys = CLangevin(20000,0.5,1,√3/2*im+0.5,0.4,gaussianD,"CL_2")
+# ComplexSys = CLangevin(20000,0.5,1,√3/2*im+0.5,0.4,gaussianD,"CL_2")
+ComplexSys = CLangevin(20000,0.5,1,1,0.4,gaussianD,"CL_2")
+for i = 0:0.1:π
+    ComplexSys = CLangevin(20000,0.5,1,exp(i*im),0,gaussianD,"CL_2")
+    display(scatter(ComplexSys[1],ComplexSys[2]))
+    arr1 = float.(ComplexSys[1])
+    println("i: ",i,"e^z:",exp(i*im))
+    display(histogram(arr1,bins=[i for i=floor(minimum(arr1)*10)/10:incsize1:(floor(maximum(arr1)*10)+1)/10],normed=true,xlabel="x",ylabel="|ψ_0|²"))
+end
+# Diverges to NaN coordinates late in τ time when Re(z) → 0, Im(z) → 1
+# Scatterplot showes values collected moves from only real part to uniform real/complex parts
+# Find out for which values eᶻ should diverge
+
 
 # scatter(ComplexSys[3],ComplexSys[4],yrange=[-0.004,0.003],xlabel="Re[ρ]",ylabel="Im[ρ]")
+ComplexSys[1]
 scatter(ComplexSys[1],ComplexSys[2])
 function getExp2(field_r,field_c)
     z = []

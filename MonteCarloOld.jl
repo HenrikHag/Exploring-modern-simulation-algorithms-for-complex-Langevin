@@ -203,14 +203,14 @@ function main(n_tau,meanfname,obsfname,expfname,m,ω,a,λ)
     exp_x, exp_x2, exp_x0x1 = zeros(n_tau), zeros(n_tau), zeros(n_tau)
     sum1, sum2, sum3 = zeros(n_tau), zeros(n_tau), zeros(n_tau)
     n_burn = 2500
-    n_skip = 50#n_tau/10#12
+    n_skip = 42#50#n_tau/10#12
     accept = 0
     idrate = 0.8
     h = 1
     #                                   #
     # Make autocorrelation negligible   #
     #                                   #
-    while true
+    while false
         runt = 200
         ato2, accept, h, Path = PreSim(n_tau, m, ω, λ, a, h, idrate, rng, Path, n_burn, n_skip, accept, runt)
         if ato2 > 2
@@ -285,7 +285,7 @@ end
 
 
 # configs1[1,2]
-main(120,"expfullB1.csv","measuredObsB1.csv","expectationvalB1.csv",1,1)
+main(16,"expfullB1.csv","measuredObsB1.csv","expectationvalB1.csv",1,1,0.5,0)
 twopoint=[]
 for i = (120*3+2):(120*4+1)
     append!(twopoint,mean(GetColumn(i,"results/measuredObsB1.csv")))

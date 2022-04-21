@@ -393,7 +393,7 @@ function PlotAC(filename)
     data1 = GetData(filename,4,1)
     autocorrdata = AutoCorrR(data1)
     jkf1 = Jackknife1(autocorrdata)
-    jkf1[:,1]
+    # jkf1[:,1]
     plot(jkf1[:,1],yerr=jkf1[:,2],title="AutoCorrelation",xlabel="τ",ylabel="Aₒ(τ)")
 end
 function PlotAC(filename,fullLength::Bool)
