@@ -115,9 +115,9 @@ function CLangevin(N,a,m,mu,la,gaussianD,filename)
     F_i = 0. #[1. for i = 1:n_tau]
     # println("The complex weight starts at: ",Weight_func(mu,la,F_r,F_i))
 
-    dt = 0.001
-    n_burn = 3/dt
-    n_skip = 3/dt
+    dt = 0.01
+    n_burn = 0#3/dt
+    n_skip = 0#3/dt
 
     # Thermalize
     for i=1:n_burn
@@ -184,17 +184,24 @@ for i = 0:11
         scatter([cos(ii*π/6) for ii=0:11],[sin(ii*π/6) for ii=0:11],color="red",legend=:inside,marker=:x)
         # scatter([real(exp(-im*ii*π/6)) for ii=0:11],[imag(exp(-im*ii*π/6)) for ii=0:11],color="red",legend=:inside,marker=:x)
     end
-    ComplexSys = CLangevin(2000,0.5,1,exp(i*im*π/6),0,gaussianD,"CL_2")
+    arr2=[]
+    for runs = 1:64
+        ComplexSys = CLangevin(2000,0.5,1,exp(i*im*π/6),0,gaussianD,"CL_2")
+        append!(arr2,getExp2(ComplexSys[1],ComplexSys[2])[1])     # ⟨x²⟩
+    end
     # display(scatter(ComplexSys[1],ComplexSys[2]))
     # arr1 = float.(ComplexSys[1])
     println("i: ",i,"e^z:",exp(i*im))
     # display(histogram(arr1,bins=[i for i=floor(minimum(arr1)*10)/10:incsize1:(floor(maximum(arr1)*10)+1)/10],normed=true,xlabel="x",ylabel="|ψ_0|²"))
-    arr2 = getExp2(ComplexSys[1],ComplexSys[2])     # ⟨x²⟩
-    if in(i,[0,1,2,10,11])
-        fig1 = scatter!([real(arr2[1])],[imag(arr2[1])],xerr=arr2[2],yerr=arr2[3],color="blue",marker=:cross)
+    if in(i,[0,1,2,3,9,10,11])
+        arr3 = [mean(arr2),Err1(real.(arr2))[2],Err1(imag.(arr2))[2]]
+        fig1 = scatter!([real(arr3[1])],[imag(arr3[1])],xerr=arr3[2],yerr=arr3[3],color="blue",marker=:cross)
+        # fig1 = scatter!([real(arr2[1])],[imag(arr2[1])],xerr=arr2[2],yerr=arr2[3],color="blue",marker=:cross)
         display(fig1)
-        if i == 11
-            savefig(fig1,"saved_plots/22.04.21_CL_gauss_mod1.pdf") # This is how to save a Julia plot as pdf !!!
+        if true
+            if i == 11
+                savefig(fig1,"saved_plots/22.04.22_CL_gauss_mod.pdf") # This is how to save a Julia plot as pdf !!!
+            end
         end
     end
 end
