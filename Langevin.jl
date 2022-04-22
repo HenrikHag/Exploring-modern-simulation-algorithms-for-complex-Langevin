@@ -123,10 +123,13 @@ function CLangevin(N,a,m,mu,la,gaussianD,filename)
     for i=1:n_burn
         for ii = 1:length(F_r)
             derAction = CActionDer(a, m, mu, la, F_r, F_i)
+            # Forward Euler: F_{n+1} = F_{n} + f(t_n,F_{n})
             F_r -= derAction[1]*dt - sqrt(2*dt)*rand(gaussianD) # N_R = 1 => N_I = 0
             F_i -= derAction[2]*dt
             # F_r[ii] -= derAction[1]*dt - sqrt(2*dt)*rand(gaussianD)
             # F_i[ii] -= derAction[2]*dt
+
+            # Backward Euler: 
         end
     end
     show(F_r);println()
@@ -181,7 +184,9 @@ ComplexSys = CLangevin(20000,0.5,1,0.05*im+1,0,gaussianD,"CL_2")
 # ComplexSys = CLangevin(20000,0.5,1,1,0,gaussianD,"CL_2")
 for i = 0:11
     if i==0
-        scatter([cos(ii*π/6) for ii=0:11],[sin(ii*π/6) for ii=0:11],color="red",legend=:inside,marker=:x)
+        # Calculate the analytical result 1/μ = ⟨z²⟩, where μ = exp(nπi/6), n = (0,11)
+        # ⟹ 1/μ = exp(-nπi/6), n = (0,11)
+        scatter([cos(ii*π/6) for ii=0:11],[sin(ii*π/6) for ii=0:11],color="red",marker=:x,legend=false)#:inside)
         # scatter([real(exp(-im*ii*π/6)) for ii=0:11],[imag(exp(-im*ii*π/6)) for ii=0:11],color="red",legend=:inside,marker=:x)
     end
     arr2=[]
@@ -200,7 +205,7 @@ for i = 0:11
         display(fig1)
         if true
             if i == 11
-                savefig(fig1,"saved_plots/22.04.22_CL_gauss_mod.pdf") # This is how to save a Julia plot as pdf !!!
+                savefig(fig1,"saved_plots/22.04.22_CL_gauss_mod2.pdf") # This is how to save a Julia plot as pdf !!!
             end
         end
     end
