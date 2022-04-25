@@ -3,6 +3,8 @@ begin
     using Plots
     using .UsersGuide
     using .MetropolisUpdate
+    using DifferentialEquations
+    using OrdinaryDiffEq
     save_path = "results/"
     gaussianD = Normal(0,1)
 end
@@ -109,6 +111,7 @@ Weight_func(1,0.4,1,0)
 # Compute ⟨ϕ²⟩ = ⟨(ϕ_r + Im*ϕ_i)^2⟩ᵩ
 function CLangevin(N,a,m,mu,la,gaussianD,filename)
     save_path = "results/"
+    intScheme = "fEuler"
     # [x₁ʳ,x₂ʳ,...]
     # [x₁ᶜ,x₂ᶜ,...]
     F_r = 0.1 #[20. for i = 1:n_tau]     # n_tau global
@@ -122,14 +125,28 @@ function CLangevin(N,a,m,mu,la,gaussianD,filename)
     # Thermalize
     for i=1:n_burn
         for ii = 1:length(F_r)
-            derAction = CActionDer(a, m, mu, la, F_r, F_i)
-            # Forward Euler: F_{n+1} = F_{n} + f(t_n,F_{n})
-            F_r -= derAction[1]*dt - sqrt(2*dt)*rand(gaussianD) # N_R = 1 => N_I = 0
-            F_i -= derAction[2]*dt
-            # F_r[ii] -= derAction[1]*dt - sqrt(2*dt)*rand(gaussianD)
-            # F_i[ii] -= derAction[2]*dt
+            if intScheme == "fEuler"
+                derAction = CActionDer(a, m, mu, la, F_r, F_i)
+                # Forward Euler: F_{n+1} = F_{n} + f(t_n,F_{n})
+                F_r -= derAction[1]*dt - sqrt(2*dt)*rand(gaussianD) # N_R = 1 => N_I = 0
+                F_i -= derAction[2]*dt
+                # F_r[ii] -= derAction[1]*dt - sqrt(2*dt)*rand(gaussianD)
+                # F_i[ii] -= derAction[2]*dt
+            else
+                # Backward Euler: F_{n+1} = F_{n} + f(t_{n+1},F_{n+1})
+                F_r0,F_i0 = copy(F_r),copy(F_i)
+                F_r, F_i = (F_r0,F_i0).+CActionDer(a, m, mu, la, F_r, F_i).*dt
+                # F_r, F_i = (1,2).+(1,2).*0.1 = (1.1, 2.2)
+                
+                # Instead of two variables, can go to one complex
+                # Then f(F,t,F_0) = F_0 + CActionDer(a,m,mu,la,F)*dt = F_0 + m*μ*F + m*λ/6*F^3
+                    # + sqrt(2*dt)*rand(gaussianD)
 
-            # Backward Euler: 
+                # Then using the DifferentialEquations package:
+                # prob = ODEProblem(f,F_0,)
+                # sol = solve(prob,ImplicitEuler())
+                F_r += sqrt(2*dt)*rand(gaussianD)
+            end
         end
     end
     show(F_r);println()
@@ -205,7 +222,7 @@ for i = 0:11
         display(fig1)
         if true
             if i == 11
-                savefig(fig1,"saved_plots/22.04.22_CL_gauss_mod2.pdf") # This is how to save a Julia plot as pdf !!!
+                savefig(fig1,"plots/22.04.22_CL_gauss_mod2.pdf") # This is how to save a Julia plot as pdf !!!
             end
         end
     end
