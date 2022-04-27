@@ -66,10 +66,42 @@ function AutoCorrR(arrayC)
     e1 = autoCorr[1]
     return (autoCorr)./e1
 end
+function AutoCorrR(arrayC,norm::Bool)
+    mean1 = mean(arrayC)
+    arrayCm = arrayC .- mean1
+    autoCorr = fft(arrayCm)
+    arrayCm = (abs.(autoCorr)).^2
+    autoCorr = ifft(arrayCm)
+    e1 = autoCorr[1]
+    if !norm
+        return autoCorr
+    end
+    return (autoCorr)./e1
+end
 function AutoCorrR(matrixC::AbstractMatrix)
     CorrD=Matrix{Float64}(undef,length(matrixC[1,:]),length(matrixC[:,1]))
     for i=1:length(matrixC[1,:])
         CorrD[i,:]=real.(AutoCorrR(append!(matrixC[:,i],[0 for i=0:length(matrixC[:,1])])))[1:length(matrixC[:,1])]
+    end
+    return CorrD
+end
+function AutoCorrR(matrixC::AbstractMatrix,norm::Bool)
+    CorrD=Matrix{Float64}(undef,length(matrixC[1,:]),length(matrixC[:,1]))
+    for i=1:length(matrixC[1,:])
+        CorrD[i,:]=real.(AutoCorrR(append!(matrixC[:,i],[0 for i=0:length(matrixC[:,1])]),norm::Bool))[1:length(matrixC[:,1])]
+    end
+    return CorrD
+end
+function AutoCorrR(matrixC::AbstractMatrix,norm::Bool,padded::Bool)
+    CorrD=Matrix{Float64}(undef,length(matrixC[1,:]),length(matrixC[:,1]))
+    if !padded
+        for i=1:length(matrixC[1,:])
+            CorrD[i,:]=real.(AutoCorrR(matrixC[:,i],norm::Bool))[1:length(matrixC[:,1])]
+        end
+        return CorrD
+    end
+    for i=1:length(matrixC[1,:])
+        CorrD[i,:]=real.(AutoCorrR(append!(matrixC[:,i],[0 for i=0:length(matrixC[:,1])]),norm::Bool))[1:length(matrixC[:,1])]
     end
     return CorrD
 end

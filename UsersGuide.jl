@@ -280,7 +280,7 @@ end
 function PlotProbDD(file,incsize1)
     arr1 = GetColumn(2:Int((length(LastRowFromFile(file))-1)/4)+1,file)
     arr1 = reshape(arr1,:)
-    histogram(arr1,bins=[i for i=floor(minimum(arr1)*10)/10:incsize1:(floor(maximum(arr1)*10)+1)/10],normed=true,xlabel="x",ylabel="|ψ_0|²")#,weights=repeat([1/length(arr1)],length(arr1))
+    histogram(arr1,bins=[i for i=floor(minimum(arr1)*10)/10:incsize1:(floor(maximum(arr1)*10)+1)/10],normed=true,xlabel="x",ylabel="|ψ₀|²",legend=false)#,weights=repeat([1/length(arr1)],length(arr1))
 end
 
 """Calculates the analytical Probability Density Diagram for the HO, and appends it to a plot  

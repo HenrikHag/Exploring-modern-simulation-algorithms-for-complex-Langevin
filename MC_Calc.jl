@@ -8,7 +8,7 @@ begin
     using GLM
 end
 # 
-measf = "results/measuredObsHO_1_β8_16.csv"#"results/measuredObsB100S0_7.csv"
+measf = "results/measuredObsHO_1_β16_16.csv"#"results/measuredObsB100S0_7.csv"
 expf = "results/expfullHO_10_1.csv"
 
 #                                               #
@@ -90,6 +90,36 @@ begin
     PlotProbDD(measf,0.1)
     PlotProbDDe(1,1,1,2)
 end
+savefig("plots/22.04.27_M_pdd10_b16.pdf")
+
+arr1 = GetColumn(2+16:2*16+1,measf)
+arr1 = reshape(arr1,:)
+histogram(arr1,bins=[i for i=floor(minimum(arr1)*10)/10:0.01:(floor(maximum(arr1)*10)+1)/10],normed=true,xlabel="x²",ylabel="|ψ₀|²",legend=false)
+
+arr1 = transpose(GetColumn(2+16:2*16+1,measf))
+ACfuncTPCF = Jackknife1(real.(AutoCorrR(arr1,false,false)))
+plot(ACfuncTPCF[:,1],yerr=ACfuncTPCF[:,2])
+PlotTPCF(measf,true, false)
+begin
+    TPC1=[]
+    Path=arr1
+    pathl=length(arr1)
+    for i = 0:pathl-2       # Two-Point Correlation
+        twopointcorr=0
+        for ii=1:pathl
+            twopointcorr += Path[ii]*Path[(ii+i-1)%pathl+1]
+        end
+        append!(TPC1,twopointcorr/pathl)
+    end
+    twopointcorr=0
+    for ii=1:pathl
+        twopointcorr += Path[ii]*Path[(ii+pathl-2)%pathl+1]
+    end
+    append!(TPC1,twopointcorr/pathl)
+    TPC1
+end
+plot(TPC1)
+
 begin
     PlotProbDD("results/measuredObsb.csv",0.1)
     PlotProbDDe(m,ω,1,2)
