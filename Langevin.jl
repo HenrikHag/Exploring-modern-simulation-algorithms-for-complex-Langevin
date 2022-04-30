@@ -4,7 +4,6 @@ begin
     using .UsersGuide
     using .MetropolisUpdate
     using DifferentialEquations
-    using OrdinaryDiffEq
     save_path = "results/"
     gaussianD = Normal(0,1)
 end
@@ -16,6 +15,105 @@ function ActionDer(a,m,mu,la,F,f₋₁,f₊₁)
 end
 # DONE: Add coupling terms 2f(i)-f(i+1)-f(i-i)
 # Understand the discretizing integral and meeting mat. from 16.03
+
+
+
+# The equation to solve using different schemes:
+# dS/dϕ     , S = 1/2 m δτ ∑[(ϕ_i+1 - ϕ_i)^2 / δτ^2 + ω^2ϕ_i^2]
+# This means feeding S to a solver
+# But here ϕ is an array, so can make a system of equations:
+# dS/dϕ_i   , S = 1/2 m δτ [((\phi_i+1 - \phi_i)^2 +(ϕ_i - ϕ_i-1)^2) / δτ^2 + ω^2ϕ_i^2]
+#               = 1/2 m δτ [((\phi_i+1 - \phi_i)^2 +(ϕ_i - ϕ_i-1)^2) / δτ^2 + ω^2ϕ_i^2]
+
+using DifferentialEquations
+dt = 0.01
+ϕ0 = 20.; a=0.5; m=1; mu=1; ϕ₊₁=20.; ϕ₋₁=20.
+f(ϕ,t,p) = (m/a*(ϕ^2-ϕ*(ϕ₊₁+ϕ₋₁)) + 0.5*m*mu*a*ϕ)*dt
+timespan = (0.0,0.01)
+prob = ODEProblem(f,ϕ0,timespan)
+sol = solve(prob,Euler(),dt=dt,abstol=1e-8,reltol=1e-8)
+# New path after drift form forward Euler:
+ϕ0 - sol(0.01)*dt   # 19.800795
+plot(sol)
+sol(0.01)
+sol = solve(prob,ImplicitEuler(),dt=dt,abstol=1e-8,reltol=1e-8)
+# New path after drift form forward Euler:
+ϕ0 - sol(0.01)*dt   # 19.800795007234047
+plot(sol)
+sol(0.01)
+# 19.800795007234047
+F = [20. for i = 1:16]
+F[2] -= ActionDer(a,m,mu,0,F[2],F[1],F[3])*dt
+F[2]    # 19.8
+
+# function Langevin(N,a,m,mu,la,gaussianD)
+#     F = [20. for i = 1:16]
+#     Flist = []
+#     push!(Flist,F)
+#     dt = 0.01
+#     for i=1:N
+#         for ii = 1:length(F)
+#             F[ii] -= ActionDer(a,m,mu,la,F[ii],F[(ii-2+n_tau)%n_tau+1],F[(ii)%n_tau+1])*dt# - sqrt(2*dt/a)*rand(gaussianD)
+#             # push!(Flist,F)
+#         end
+#     end
+#     return Flist
+# end
+# Langevin(20,0.5,1,1,0,gaussianD)
+
+
+# TODO
+    # Use the newly found method to run Langevin simulations, and see if systems are more stable for
+        # ImplicitEuler
+    # And if the system is the same for
+        # Forward Euler
+
+
+
+
+# Using DifferentialEquations.jl to solve with different solvers
+using DifferentialEquations
+using Plots
+u0 = 1.5
+a=0.5; m=1; mu=1; la=0; f₋₁=1; f₊₁=1
+f(t,p,F) = m/a^2*(2*F-(f₋₁+f₊₁)) + m*mu*F
+# g(gaussianD,p,P) =
+timespan = (0.0,0.01) # Solve from time = 0 to
+# time = 1
+prob = ODEProblem(f,u0,timespan)
+dt = 0.001
+sol = solve(prob,Euler(),dt=dt,abstol=1e-8,reltol=1e-8) # Solves the ODE
+sol(0.001)
+plot(sol)
+
+using DifferentialEquations
+α=1
+u0=1/2
+f2(t,p,u) = α*u
+tspan = (0.0,1.0)
+prob = ODEProblem(f2,u0,tspan)
+sol = solve(prob,Euler(),dt=1/2^4) # Solves the ODE
+sol[5]      # 0.5234375 not .637
+sol.t[8]    # 0.4375    not .438
+sol = solve(prob,Vern7())
+plot(sol)
+
+ActionDer(a,m,mu,la,u0,1,1)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 function Langevin(N,a,m,mu,la,gaussianD)
     F = [20. for i = 1:16]
@@ -139,6 +237,7 @@ function CLangevin(N,a,m,mu,la,gaussianD,filename)
                 # F_r, F_i = (1,2).+(1,2).*0.1 = (1.1, 2.2)
                 
                 # Instead of two variables, can go to one complex
+                # Matricies / vectors?
                 # Then f(F,t,F_0) = F_0 + CActionDer(a,m,mu,la,F)*dt = F_0 + m*μ*F + m*λ/6*F^3
                     # + sqrt(2*dt)*rand(gaussianD)
 
