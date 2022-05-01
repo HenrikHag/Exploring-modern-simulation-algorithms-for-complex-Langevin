@@ -134,15 +134,15 @@ function Langevin(N,a,m,mu,la,gaussianD)
     for i=1:N
         # println(F)
         for ii = 1:length(F)
-            ϕ₋₁ = F[(ii-2+n_tau)%n_tau+1]; ϕ₊₁ = F[(ii)%n_tau+1]
-            f(ϕ,t,p) = (m/a*(ϕ^2-ϕ*(ϕ₊₁+ϕ₋₁)) + 0.5*m*mu*a*ϕ)*dt
+            ϕ₋₁ = F[(ii-2+n_tau)%n_tau+1]; ϕ₊₁ = F[(ii)%n_tau+1]; ϕ0 = F[ii]
+            f(ϕ,t,p) = (m/a*(ϕ^2-ϕ*(ϕ₊₁+ϕ₋₁)) + 0.5*m*mu*a*ϕ^2)*dt
             prob = ODEProblem(f,ϕ0,timespan)
             sol = solve(prob,Euler(),dt=dt,abstol=1e-8,reltol=1e-8)
             sol3 = solve(prob,ImplicitEuler(),dt=dt,abstol=1e-8,reltol=1e-8)
             # println(sol(0.01))
-            F[ii] -= sol(0.01)*dt - sqrt(2*dt/a)*randoms1[16*(i-1)+ii]
+            F[ii] -= sol(dt)*dt - sqrt(2*dt/a)*randoms1[16*(i-1)+ii]
             F2[ii] -= ActionDer(a,m,mu,la,F2[ii],F2[(ii-2+n_tau)%n_tau+1],F2[(ii)%n_tau+1])*dt - sqrt(2*dt/a)*randoms1[16*(i-1)+ii]
-            F3[ii] -= sol3(0.01)*dt - sqrt(2*dt/a)*randoms1[16*(i-1)+ii]
+            F3[ii] -= sol3(dt)*dt - sqrt(2*dt/a)*randoms1[16*(i-1)+ii]
         end
         Flist[i+1,:] = F
         F2list[i+1,:] = F2
@@ -155,10 +155,11 @@ res1, res2, res3 = Langevin(10,0.5,1,1,0,gaussianD);
 res1
 res2
 res3
-plot(res1[:,1])
-plot!(res2[:,1])
-plot!(res3[:,1])
-
+begin
+    plot(res1[:,1])
+    plot!(res2[:,1])
+    plot!(res3[:,1])
+end
 
 
 
@@ -166,13 +167,19 @@ function Langevin(N,a,m,mu,la,gaussianD,filename)
     path = "results/"
     F = [20. for i = 1:n_tau]
     dt = 0.01
+    timespan = (0.0,dt)
     n_burn = 3/dt
     n_skip = 3/dt
 
     # Thermalize
     for i=1:n_burn
         for ii = 1:length(F)
-            F[ii] -= ActionDer(a,m,mu,la,F[ii],F[(ii-2+n_tau)%n_tau+1],F[(ii)%n_tau+1])*dt - sqrt(2*dt/a)*rand(gaussianD)
+            ϕ₋₁ = F[(ii-2+n_tau)%n_tau+1]; ϕ₊₁ = F[(ii)%n_tau+1]; ϕ0 = F[ii]
+            f(ϕ,t,p) = (m/a*(ϕ^2-ϕ*(ϕ₊₁+ϕ₋₁)) + 0.5*m*mu*a*ϕ^2)*dt
+            prob = ODEProblem(f,ϕ0,timespan)
+            sol = solve(prob,Euler(),dt=dt,abstol=1e-8,reltol=1e-8)
+            F[ii] -= sol(dt)*dt - sqrt(2*dt/a)*rand(gaussianD)
+            # F[ii] -= ActionDer(a,m,mu,la,F[ii],F[(ii-2+n_tau)%n_tau+1],F[(ii)%n_tau+1])*dt - sqrt(2*dt/a)*rand(gaussianD)
         end
     end
     show(F);println()
@@ -182,7 +189,12 @@ function Langevin(N,a,m,mu,la,gaussianD,filename)
         writec123tofile(path,filename,F,i)
         for iii = 1:n_skip+1
             for ii = 1:length(F)
-                F[ii] -= ActionDer(a,m,mu,la,F[ii],F[(ii-2+n_tau)%n_tau+1],F[(ii)%n_tau+1])*dt - sqrt(2*dt/a)*rand(gaussianD)
+                ϕ₋₁ = F[(ii-2+n_tau)%n_tau+1]; ϕ₊₁ = F[(ii)%n_tau+1]; ϕ0 = F[ii]
+                f(ϕ,t,p) = (m/a*(ϕ^2-ϕ*(ϕ₊₁+ϕ₋₁)) + 0.5*m*mu*a*ϕ^2)*dt
+                prob = ODEProblem(f,ϕ0,timespan)
+                sol = solve(prob,Euler(),dt=dt,abstol=1e-8,reltol=1e-8)
+                F[ii] -= sol(dt)*dt - sqrt(2*dt/a)*rand(gaussianD)
+                # F[ii] -= ActionDer(a,m,mu,la,F[ii],F[(ii-2+n_tau)%n_tau+1],F[(ii)%n_tau+1])*dt - sqrt(2*dt/a)*rand(gaussianD)
             end
         end
         if i%2000==0
@@ -199,12 +211,12 @@ begin
     n_tau=16
     β=8
     a=β/n_tau
-    Langv1=Langevin(1500,a,1,1,0,gaussianD,"CL_3.csv")
+    Langv1=Langevin(1500,a,1,1,0,gaussianD,"CL_4.csv")
 end
 
 # Langevin expectationvalues
-x1 = Err1(GetData("results/CL_1.csv",4,1))
-x2 = Err1(GetData("results/CL_1.csv",4,2))
+x1 = Err1(GetData("results/CL_4.csv",4,1))
+x2 = Err1(GetData("results/CL_4.csv",4,2))
 plot(x1[:,1],yerr=x1[:,2])
 plot(x2[:,1],yerr=x2[:,2])
 
@@ -414,10 +426,10 @@ end
 plot!(TwopointE)
 
     # Probability density diagram #
-PlotProbDD("results/CL_3.csv",0.1)
+PlotProbDD("results/CL_4.csv",0.1)
 PlotProbDDe(1,1,1,3)
     # sampling
-plot(reshape(GetColumn(2,"results/CL_1.csv"),:))#:Int((length(LastRowFromFile(file))-1)/4)+1
+scatter(reshape(GetColumn(2,"results/CL_4.csv"),:))#:Int((length(LastRowFromFile(file))-1)/4)+1
     # Autocorrelation
 PlotAC("results/CL_1.csv",1000)
 # PlotACsb("results/CL_1.csv",1000)

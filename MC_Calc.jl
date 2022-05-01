@@ -8,7 +8,7 @@ begin
     using GLM
 end
 # 
-measf = "results/measuredObsHO_1_β16_16.csv"#"results/measuredObsB100S0_7.csv"
+measf = "results/measuredObsHO_1_β8_16.csv"#"results/measuredObsB100S0_7.csv"
 expf = "results/expfullHO_10_1.csv"
 
 #                                               #
@@ -227,8 +227,9 @@ begin   # ⟨x₁²⟩
     scatter(a)
     plt = plot!(a1,width=4)
     display(plt)                                   # Save as png manually
-    savefig(plt,"plots/22.04.25_M_expect_x2.pdf")   # Save as pdf in folder "plots"
+    # savefig(plt,"plots/22.04.25_M_expect_x2.pdf")   # Save as pdf in folder "plots"
 end
+Exp_x2(16,0.5,1,1)
 
 begin   # ⟨xᵢ⟩, ⟨xᵢ²⟩
     a1 = Jackknife1(GetData(measf,4,1)[1:400,:])
@@ -236,5 +237,5 @@ begin   # ⟨xᵢ⟩, ⟨xᵢ²⟩
     a2 = Jackknife1(GetData(measf,4,1)[1:400,:].^2)
     plt = plot!(a2[:,1],yerr=a2[:,2])
     display(plt)                                   # Save as png manually
-    savefig(plt,"plots/22.04.25_M_expect_x_i.pdf")   # Save as pdf in folder "plots"
+    # savefig(plt,"plots/22.04.25_M_expect_x_i.pdf")   # Save as pdf in folder "plots"
 end

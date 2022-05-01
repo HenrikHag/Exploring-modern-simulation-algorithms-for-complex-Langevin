@@ -3,7 +3,7 @@ module MetropolisUpdate
 using Random, Printf, Plots, Gnuplot, Statistics, FFTW
 
 export Random, Printf, Plots, Gnuplot
-export n_tau, idrate, h, m, ω, accept, sum1, sum2, sum3
+# export n_tau, idrate, h, m, ω, accept, sum1, sum2, sum3
 export Exp_x2, AutoCorrR, HO_Action, AHO_Action, MeasureObs, E_Vals#, MeasureObs
 export printarray, writee123tofile, writec123tofile, writec3s3tofile, writes3e3tofile, writeeMean
 export plotexpx, plotexpx1, plotexpx2
@@ -17,39 +17,38 @@ export plotexpx, plotexpx1, plotexpx2
 #                       #
 """Number of timesteps/coords
 """
-global n_tau = 12#1200      # Number of coords in Path
+# global n_tau = 12#1200      # Number of coords in Path
 """Optimal acceptrate for simulation, used to adjust h (random change scaler)
 """
-const idrate = 0.8
+# const idrate = 0.8
 
 
 
 """Scale for random change per coord per swipe
 """
-global h = 1           # Scale for random change in coords
-global Path = zeros(n_tau)
-global accept = 0
-global sum1 = zeros(n_tau)   # Path_n
-global sum2 = zeros(n_tau)  # Path_n^2
-global sum3 = zeros(n_tau)  # Path_1 * Path_n
+# global h = 1           # Scale for random change in coords
+# global Path = zeros(n_tau)
+# global accept = 0
+# global sum1 = zeros(n_tau)   # Path_n
+# global sum2 = zeros(n_tau)  # Path_n^2
+# global sum3 = zeros(n_tau)  # Path_1 * Path_n
 
 
 
 
 """Dimensionless mass
 """
-global m = 1
+# global m = 1
 """Dimensionless natural frequency
 """
-global ω = 1
+# global ω = 1
 
 #                                                              #
 # Defining the analytic formulas for values to be calculated   #
 #                                                              #
-function Exp_x2(n_tau, m, ω)
-    R = 1+(ω^2)/2-ω*√(1+(ω^2)/4)
-    exp_x2 = 1/(2*m*ω*√(1+1/4*ω^2))*(1+R^n_tau)/(1-R^n_tau)
-    return exp_x2
+function Exp_x2(n_tau, a, m, ω)
+    R = 1+((a*ω)^2)/2-a*ω*sqrt(1+((a*ω)^2)/4)
+    return 1/(2*a^2*m*ω*sqrt(1+(a*ω/2)^2))*(1+R^n_tau)/(1-R^n_tau)
 end
 
 
@@ -122,7 +121,7 @@ function HO_Action(n_tau, m, ω, a, Path, coord, x)
     # n_m1 = (coord-2) % n_tau + 1
     # print(n_p1)
     # print(n_m1)
-    return 1/2*m*a*(((Path[((coord)%n_tau)+1]-x)/a)^2
+    return 0.5*m*a*(((Path[((coord)%n_tau)+1]-x)/a)^2
     + ((x-Path[((coord-2+n_tau)%n_tau)+1])/a)^2
     + ω^2*(x)^2)
 end
@@ -130,9 +129,9 @@ end
 # print(Path[((2-2)%16+1)])
 
 function AHO_Action(n_tau, m, ω, a, λ, Path, coord, x)
-    return 1/2*m*a*(((Path[((coord)%n_tau)+1]-x)/a)^2
+    return 0.5*m*a*(((Path[((coord)%n_tau)+1]-x)/a)^2
     + ((x-Path[((coord-2+n_tau)%n_tau)+1])/a)^2
-    + ω^2*(x)^2 + 1/4*λ*x^4)
+    + ω^2*(x)^2) + 1/(4*a^4)*λ*x^4
 end
 
 
