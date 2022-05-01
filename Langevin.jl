@@ -32,12 +32,12 @@ f(ϕ,t,p) = (m/a*(ϕ^2-ϕ*(ϕ₊₁+ϕ₋₁)) + 0.5*m*mu*a*ϕ)*dt
 timespan = (0.0,0.01)
 prob = ODEProblem(f,ϕ0,timespan)
 sol = solve(prob,Euler(),dt=dt,abstol=1e-8,reltol=1e-8)
-# New path after drift form forward Euler:
+# New path after drift from forward Euler:
 ϕ0 - sol(0.01)*dt   # 19.800795
 plot(sol)
 sol(0.01)
 sol = solve(prob,ImplicitEuler(),dt=dt,abstol=1e-8,reltol=1e-8)
-# New path after drift form forward Euler:
+# New path after drift from forward Euler:
 ϕ0 - sol(0.01)*dt   # 19.800795007234047
 plot(sol)
 sol(0.01)
@@ -51,9 +51,11 @@ F[2]    # 19.8
 #     Flist = []
 #     push!(Flist,F)
 #     dt = 0.01
+#     prob = ODEProblem(f,ϕ0,timespan)
 #     for i=1:N
 #         for ii = 1:length(F)
-#             F[ii] -= ActionDer(a,m,mu,la,F[ii],F[(ii-2+n_tau)%n_tau+1],F[(ii)%n_tau+1])*dt# - sqrt(2*dt/a)*rand(gaussianD)
+#             sol = solve(prob,Euler(),dt=dt,abstol=1e-8,reltol=1e-8)
+#             F[ii] -= sol(0.01)*dt - sqrt(2*dt/a)*rand(gaussianD)
 #             # push!(Flist,F)
 #         end
 #     end
@@ -117,17 +119,49 @@ ActionDer(a,m,mu,la,u0,1,1)
 
 function Langevin(N,a,m,mu,la,gaussianD)
     F = [20. for i = 1:16]
-    Flist = []
-    push!(Flist,F)
+    F2 = [20. for i = 1:16]
+    F3 = [20. for i = 1:16]
+    Flist = Matrix{Float64}(undef,N+1,16)
+    F2list = Matrix{Float64}(undef,N+1,16)
+    F3list = Matrix{Float64}(undef,N+1,16)
+    Flist[1,:] = F
+    F2list[1,:] = F2
+    F3list[1,:] = F3
+    # println(Flist)
     dt = 0.01
+    timespan = (0.0,dt)
+    randoms1 = rand(gaussianD,N*16)
     for i=1:N
+        # println(F)
         for ii = 1:length(F)
-            F[ii] -= ActionDer(a,m,mu,la,F[ii],F[(ii-2+n_tau)%n_tau+1],F[(ii)%n_tau+1])*dt - sqrt(2*dt/a)*rand(gaussianD)
-            # push!(Flist,F)
+            ϕ₋₁ = F[(ii-2+n_tau)%n_tau+1]; ϕ₊₁ = F[(ii)%n_tau+1]
+            f(ϕ,t,p) = (m/a*(ϕ^2-ϕ*(ϕ₊₁+ϕ₋₁)) + 0.5*m*mu*a*ϕ)*dt
+            prob = ODEProblem(f,ϕ0,timespan)
+            sol = solve(prob,Euler(),dt=dt,abstol=1e-8,reltol=1e-8)
+            sol3 = solve(prob,ImplicitEuler(),dt=dt,abstol=1e-8,reltol=1e-8)
+            # println(sol(0.01))
+            F[ii] -= sol(0.01)*dt - sqrt(2*dt/a)*randoms1[16*(i-1)+ii]
+            F2[ii] -= ActionDer(a,m,mu,la,F2[ii],F2[(ii-2+n_tau)%n_tau+1],F2[(ii)%n_tau+1])*dt - sqrt(2*dt/a)*randoms1[16*(i-1)+ii]
+            F3[ii] -= sol3(0.01)*dt - sqrt(2*dt/a)*randoms1[16*(i-1)+ii]
         end
+        Flist[i+1,:] = F
+        F2list[i+1,:] = F2
+        F3list[i+1,:] = F3
     end
-    return Flist
+    return Flist, F2list, F3list
 end
+res1, res2, res3 = Langevin(10,0.5,1,1,0,gaussianD);
+
+res1
+res2
+res3
+plot(res1[:,1])
+plot!(res2[:,1])
+plot!(res3[:,1])
+
+
+
+
 function Langevin(N,a,m,mu,la,gaussianD,filename)
     path = "results/"
     F = [20. for i = 1:n_tau]
