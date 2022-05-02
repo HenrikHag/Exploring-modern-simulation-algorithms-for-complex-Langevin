@@ -1,5 +1,5 @@
 # include("MetropolisUpdate.jl")
-using Revise
+# using Revise
 begin
     using .MetropolisUpdate
     using .UsersGuide
@@ -73,6 +73,7 @@ function MetroSwipe(n_tau, m, ω, λ, a, h, idrate, rng, Path)
         s_old = AHO_Action(n_tau, m, ω, a, λ, Path, i, Path[i])
         s_new = AHO_Action(n_tau, m, ω, a, λ, Path, i, x_new)
         # printf("s_old: %f, s_new: %f\n", s_old, s_new)
+        println("New: ",exp(-difActionAHO(n_tau,a,m,ω,λ,Path,i,x_new))," Old: ",exp(s_old-s_new))
         if rand(rng) < exp(s_old-s_new)
             Path[i] = x_new
             accept += 1/n_tau
@@ -84,6 +85,9 @@ function MetroSwipe(n_tau, m, ω, λ, a, h, idrate, rng, Path)
     # println(h)
     return Path, accept, h
 end
+
+MetroSwipe(16,1,1,0,0.5,1,0.8,rng,zeros(16))
+
 
 """Does a metroswipe by testing a change for each element,  
 and adds this new coord weighted by change in action.  

@@ -4,7 +4,7 @@ using Random, Printf, Plots, Gnuplot, Statistics, FFTW
 
 export Random, Printf, Plots, Gnuplot
 # export n_tau, idrate, h, m, ω, accept, sum1, sum2, sum3
-export Exp_x2, AutoCorrR, HO_Action, AHO_Action, MeasureObs, E_Vals#, MeasureObs
+export Exp_x2, AutoCorrR, HO_Action, AHO_Action, difActionAHO, MeasureObs, E_Vals#, MeasureObs
 export printarray, writee123tofile, writec123tofile, writec3s3tofile, writes3e3tofile, writeeMean
 export plotexpx, plotexpx1, plotexpx2
 
@@ -134,6 +134,10 @@ function AHO_Action(n_tau, m, ω, a, λ, Path, coord, x)
     + ω^2*(x)^2) + 1/(4*a^4)*λ*x^4
 end
 
+function difActionAHO(n_tau,a,m,ω,λ,Path,index,proposedx)
+    return m*(proposedx^2-Path[index]^2+(Path[index]-proposedx)*(Path[((index)%n_tau)+1]+Path[((index-2+n_tau)%n_tau)+1]))/a
+    + 0.5*a*m*ω^2*(proposedx^2-Path[index]^2)
+end
 
 #                                   #
 # Measure the current observables   #

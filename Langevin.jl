@@ -163,23 +163,27 @@ end
 
 
 
+
+
 function Langevin(N,a,m,mu,la,gaussianD,filename)
     path = "results/"
     F = [20. for i = 1:n_tau]
-    dt = 0.01
-    timespan = (0.0,dt)
+    dt = 0.001
+    # timespan = (0.0,dt)
     n_burn = 3/dt
     n_skip = 3/dt
 
     # Thermalize
     for i=1:n_burn
         for ii = 1:length(F)
-            ϕ₋₁ = F[(ii-2+n_tau)%n_tau+1]; ϕ₊₁ = F[(ii)%n_tau+1]; ϕ0 = F[ii]
-            f(ϕ,t,p) = (m/a*(ϕ^2-ϕ*(ϕ₊₁+ϕ₋₁)) + 0.5*m*mu*a*ϕ^2)*dt
-            prob = ODEProblem(f,ϕ0,timespan)
-            sol = solve(prob,Euler(),dt=dt,abstol=1e-8,reltol=1e-8)
-            F[ii] -= sol(dt)*dt - sqrt(2*dt/a)*rand(gaussianD)
-            # F[ii] -= ActionDer(a,m,mu,la,F[ii],F[(ii-2+n_tau)%n_tau+1],F[(ii)%n_tau+1])*dt - sqrt(2*dt/a)*rand(gaussianD)
+            # Other solvers
+            # ϕ₋₁ = F[(ii-2+n_tau)%n_tau+1]; ϕ₊₁ = F[(ii)%n_tau+1]; ϕ0 = F[ii]
+            # f(ϕ,t,p) = (m/a*(ϕ^2-ϕ*(ϕ₊₁+ϕ₋₁)) + 0.5*m*mu*a*ϕ^2)*dt
+            # prob = ODEProblem(f,ϕ0,timespan)
+            # sol = solve(prob,Euler(),dt=dt,abstol=1e-8,reltol=1e-8)
+            # F[ii] -= sol(dt)*dt - sqrt(2*dt/a)*rand(gaussianD)
+            # Own solver
+            F[ii] -= ActionDer(a,m,mu,la,F[ii],F[(ii-2+n_tau)%n_tau+1],F[(ii)%n_tau+1])*dt - sqrt(2*dt/a)*rand(gaussianD)
         end
     end
     show(F);println()
@@ -189,12 +193,14 @@ function Langevin(N,a,m,mu,la,gaussianD,filename)
         writec123tofile(path,filename,F,i)
         for iii = 1:n_skip+1
             for ii = 1:length(F)
-                ϕ₋₁ = F[(ii-2+n_tau)%n_tau+1]; ϕ₊₁ = F[(ii)%n_tau+1]; ϕ0 = F[ii]
-                f(ϕ,t,p) = (m/a*(ϕ^2-ϕ*(ϕ₊₁+ϕ₋₁)) + 0.5*m*mu*a*ϕ^2)*dt
-                prob = ODEProblem(f,ϕ0,timespan)
-                sol = solve(prob,Euler(),dt=dt,abstol=1e-8,reltol=1e-8)
-                F[ii] -= sol(dt)*dt - sqrt(2*dt/a)*rand(gaussianD)
-                # F[ii] -= ActionDer(a,m,mu,la,F[ii],F[(ii-2+n_tau)%n_tau+1],F[(ii)%n_tau+1])*dt - sqrt(2*dt/a)*rand(gaussianD)
+                # Other solvers
+                # ϕ₋₁ = F[(ii-2+n_tau)%n_tau+1]; ϕ₊₁ = F[(ii)%n_tau+1]; ϕ0 = F[ii]
+                # f(ϕ,t,p) = (m/a*(ϕ^2-ϕ*(ϕ₊₁+ϕ₋₁)) + 0.5*m*mu*a*ϕ^2)*dt
+                # prob = ODEProblem(f,ϕ0,timespan)
+                # sol = solve(prob,Euler(),dt=dt,abstol=1e-8,reltol=1e-8)
+                # F[ii] -= sol(dt)*dt - sqrt(2*dt/a)*rand(gaussianD)
+                # Own solver
+                F[ii] -= ActionDer(a,m,mu,la,F[ii],F[(ii-2+n_tau)%n_tau+1],F[(ii)%n_tau+1])*dt - sqrt(2*dt/a)*rand(gaussianD)
             end
         end
         if i%2000==0
@@ -211,7 +217,7 @@ begin
     n_tau=16
     β=8
     a=β/n_tau
-    Langv1=Langevin(1500,a,1,1,0,gaussianD,"CL_4.csv")
+    Langv1=Langevin(10000,a,1,1,0,gaussianD,"L_dt0.001_b8.csv")
 end
 
 # Langevin expectationvalues
