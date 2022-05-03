@@ -3,8 +3,9 @@ module UsersGuide
 using Plots, Statistics, StatsBase
 using Main.MetropolisUpdate
 
-export GetColumn, GetData, GetTwoPointData, GetTP1data, GetExpXData, GetLastMean, Err1
-export Jackknife1
+export GetColumn, GetData, GetTwoPointData, GetTP1data, GetExpXData, GetLastMean
+export Err1, Jackknife1
+export Exp_x2e
 export LastRowFromFile, PlotExp, plot_x, PlotProbDD, PlotProbDDe, PlotTPCF, EffM, PlotEffM, PlotAC, PlotACsb
 
 # Creating functions to work on results from User's Guide to M C Methods
@@ -192,6 +193,17 @@ function Jackknife1(matrix1::AbstractMatrix)
 end
 
 
+
+#                                               #
+#          Expectation values of data           #
+#                                               #
+"""Calculates the analytical expectation value ⟨x²⟩ for the Harmonic Oscillator system  
+with mass m, frequency ω, lattice spacing a, and lattice points n_tau.
+"""
+function Exp_x2e(n_tau, a, m, ω)
+    R = 1 + a^2*ω^2/2 - a*ω*sqrt(1+ω^2*a^2/4)
+    return (1 + R^n_tau)/(1 - R^n_tau)/(2*m*ω)
+end
 
 
 

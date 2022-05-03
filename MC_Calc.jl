@@ -215,27 +215,28 @@ begin   # ⟨x₁⟩
     scatter(a)
     plt = plot!(a1,width=4)
     display(plt)                                   # Save as png manually
-    savefig(plt,"plots/22.04.25_M_expect_x1.pdf")   # Save as pdf in folder "plots"
+    # savefig(plt,"plots/22.05.03_M_expect_x1.pdf")   # Save as pdf in folder "plots"
 end
 
 begin   # ⟨x₁²⟩
     a1=[]
-    a = GetData(measf,4,1)[1:400,1].^2
+    a = GetData(measf,4,1)[1:4000,1].^2
     for i = 1:length(a)
         append!(a1,mean(a[1:i]))
     end
     scatter(a)
     plt = plot!(a1,width=4)
     display(plt)                                   # Save as png manually
-    # savefig(plt,"plots/22.04.25_M_expect_x2.pdf")   # Save as pdf in folder "plots"
+    # savefig(plt,"plots/22.05.03_M_expect_x2.pdf")   # Save as pdf in folder "plots"
 end
-Exp_x2(16,0.5,1,1)
+Exp_x2(16,0.95,1,1)
 
 begin   # ⟨xᵢ⟩, ⟨xᵢ²⟩
-    a1 = Jackknife1(GetData(measf,4,1)[1:400,:])
+    a1 = Jackknife1(GetData(measf,4,1))
     plot(a1[:,1],yerr=a1[:,2],legend=false)
-    a2 = Jackknife1(GetData(measf,4,1)[1:400,:].^2)
-    plt = plot!(a2[:,1],yerr=a2[:,2])
+    a2 = Jackknife1(GetData(measf,4,1).^2)
+    plot!(a2[:,1],yerr=a2[:,2])
+    plt = hline!([Exp_x2e(16,0.5,1,1),0])
     display(plt)                                   # Save as png manually
-    # savefig(plt,"plots/22.04.25_M_expect_x_i.pdf")   # Save as pdf in folder "plots"
+    # savefig(plt,"plots/22.05.03_M_expect_x_i.pdf")   # Save as pdf in folder "plots"
 end
