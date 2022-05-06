@@ -3,7 +3,8 @@ begin
     using Plots
     using .UsersGuide
     using .MetropolisUpdate
-    using DifferentialEquations
+    using DifferentialEquations, StochasticDiffEq#, SimpleDiffEq
+    using LabelledArrays
     save_path = "results/"
     gaussianD = Normal(0,1)
 end
@@ -15,6 +16,13 @@ function ActionDer(a,m,mu,la,F,f₋₁,f₊₁)
 end
 # DONE: Add coupling terms 2f(i)-f(i+1)-f(i-i)
 # Understand the discretizing integral and meeting mat. from 16.03
+
+
+# Use the StochasticDiffEq package to achive the correct result for different solvers
+# SDEFunction()
+# SDEProblem()
+# Use the SimpleDiffEq package to get the SimpleEM for fixed stepsize Euler-Maruyama
+
 
 
 
@@ -115,7 +123,11 @@ ActionDer(a,m,mu,la,u0,1,1)
 
 
 
-
+struct param
+    a::Float64
+    m::Float64
+    mu::Float64
+end
 
 function Langevin(N,a,m,mu,la,gaussianD)
     n_tau = 16
@@ -136,7 +148,7 @@ function Langevin(N,a,m,mu,la,gaussianD)
         # println(F)
         for ii = 1:n_tau
             ϕ₋₁ = F[(ii-2+n_tau)%n_tau+1]; ϕ₊₁ = F[(ii)%n_tau+1]; ϕ0 = F[ii]
-            f(ϕ,t,p) = (m/a*(ϕ^2-ϕ*(ϕ₊₁+ϕ₋₁)) + 0.5*m*mu*a*ϕ^2)*dt
+            f(ϕ,t,p) = (m/a*(2ϕ-(ϕ₊₁+ϕ₋₁)) + m*mu*a*ϕ)*dt
             prob = ODEProblem(f,ϕ0,timespan)
             sol = solve(prob,Euler(),dt=dt,abstol=1e-8,reltol=1e-8)
             sol3 = solve(prob,ImplicitEuler(),dt=dt,abstol=1e-8,reltol=1e-8)
@@ -160,6 +172,75 @@ begin
     plot(res1[:,1])
     plot!(res2[:,1])
     plot!(res3[:,1])
+end
+
+
+
+struct AHO_Param
+    a::Float64  # Lattice spacing
+    m::Float64  # Mass
+    mu::Float64 # μ
+    λ::Float64
+end
+
+function ActionDerSchem(du, u, params, t)
+    p = params.p
+    xR = @view u[:]
+    F_diff_m1 = xR .- xR[vcat(end,1:end-1)]   # dx_j - dx_{j-1}
+    F_diff_p1 = xR[vcat(2:end,1)] .- xR       # dx_{j+1} - dx_j
+
+    du .= p.m .* (F_diff_p1 .- F_diff_m1) ./ p.a^2 .- (p.mu .* xR)
+end
+# ActionDerSchem([1,2,1,1,2,1],params)
+
+function RandScale(du, u, param, t)
+    a = param.p.a
+    du .= sqrt.(2. ./ a)
+end
+
+function LangevinSchem(N,a,m,mu,la,gaussianD)
+    n_tau = 16
+    F0 = [20. for i = 1:n_tau]
+    Flist = Matrix{Float64}(undef,N+1,n_tau)
+    Flist[1,:] = F0
+    dt = 0.01
+    timespan = (0.0,3*N)
+    # params = Lvector(p=struct w fields m μ λ)
+    params = LVector(p=AHO_Param(a,m,mu,la))
+    # Function to calculate change in action for whole path
+    sdeprob1 = SDEProblem(ActionDerSchem,RandScale,F0,timespan,params)
+
+    @time sol = solve(sdeprob1, Euler(), progress=true, saveat=0.1/dt, savestart=false,
+                dtmax=1e-3, dt=dt, abstol=5e-2,reltol=5e-2)
+end
+
+Solution1 = LangevinSchem(80000,0.5,1,1,0,gaussianD)
+plot(Solution1)
+Solution1.u
+
+begin
+    n_burn = 2
+    Set1 = Matrix{Float64}(undef,length(Solution1.u[n_burn:end]),length(Solution1.u[1]))
+    for i = n_burn:length(Solution1.u)
+        Set1[i-n_burn+1,:] = Solution1.u[i]
+    end
+
+    # Plot AutoCorrelation
+    autocorrdata = AutoCorrR(Set1)
+    jkf1 = Jackknife1(autocorrdata)
+    # jkf1[:,1]
+    display(plot(jkf1[:,1],yerr=jkf1[:,2],title="AutoCorrelation",xlabel="τ",ylabel="Aₒ(τ)"))
+
+    # Plot TPCF
+    arr1 = reshape(Set1,:)
+    histogram(arr1,bins=[i for i=floor(minimum(arr1)*10)/10:0.1:(floor(maximum(arr1)*10)+1)/10],normed=true,xlabel="x",ylabel="|ψ₀|²",legend=false)
+    display(PlotProbDDe(1,1,1,2))
+
+    println("⟨x⟩ = ",Err1(arr1)[1]," with err: ",Err1(arr1)[2])         # - 4.9*10^-4   ± 0.002048
+    println("⟨x²⟩ = ",Err1(arr1.^2)[1]," with err: ",Err1(arr1.^2)[2])  # 0.5102        ± 0.002060
+
+    println("⟨x⟩ = ",Jackknife1(arr1)[1]," with err: ",Jackknife1(arr1)[2])         # - 4.9*10^-4   ± 0.002048
+    println("⟨x²⟩ = ",Jackknife1(arr1.^2)[1]," with err: ",Jackknife1(arr1.^2)[2])  # 0.5102        ± 0.002060
 end
 
 
