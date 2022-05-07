@@ -1,13 +1,30 @@
+# using MetroLangCLsimulation
 begin
     using Distributions
     using Plots
-    using .UsersGuide
     using .MetropolisUpdate
+    using .UsersGuide
     using DifferentialEquations, StochasticDiffEq#, SimpleDiffEq
     using LabelledArrays
+    using Dates
     save_path = "results/"
     gaussianD = Normal(0,1)
+    """Finds todays date and returns it in format: "yy.mm.dd"  
+    """
+    function findDate()
+        y = string(Dates.year(Dates.today()))[3:4]
+        m = string(Dates.month(Dates.today()))
+        d = string(Dates.day(Dates.today()))
+        if length(m)==1 m = string("0",m) end
+        if length(d)==1 d = string("0",d) end
+        return string(y,".",m,".",d)
+    end
+    save_date = findDate()
 end
+
+# import Pkg; Pkg.activate("."); Pkg.instantiate()
+
+
 #       a(1/2*m*(P[i+1]-P[i])²/a² + m*μ/2*ϕ² + m*λ/4!*ϕ⁴)
 #       -> (m/a²*(2*P[i]-P[i+1]-P[i-1]) + mμϕ + mλ/6*ϕ³)*Δt
 function ActionDer(a,m,mu,la,F,f₋₁,f₊₁)
@@ -316,6 +333,17 @@ plot(x2[:,1],yerr=x2[:,2])
 
 
 
+
+
+
+
+######################################
+## Complex Langevin ##################
+######################################
+
+
+
+
 #Computed by a Hubbard-Stratonovich transformation.
 # Instead of doing the HS transformation described in paper [2], 
 #   we just do the mentioned choice of complex μ (or λ).
@@ -547,3 +575,197 @@ a = [0.990894    0.00115783;
  -0.0086682   0.000855048;]
  plot(a[:,1],yerr=a[:,2])
  PlotEffM("results/CL_1.csv")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+######################################
+## Complex Langevin solver package ###
+######################################
+
+
+struct AHO_CL_Param
+    a::Float64  # Lattice spacing
+    m::Float64  # Mass
+    mu::Complex # μ
+    λ::Float64
+end
+
+function ActionDerSchem(du, u, params, t)
+    p = params.p
+    xR = @view u[1:div(end,2)]
+    xI = @view u[div(end,2)+1:end]
+    Fr_diff_m1 = xR .- xR[vcat(end,1:end-1)]   # dx_j - dx_{j-1}
+    Fr_diff_p1 = xR[vcat(2:end,1)] .- xR       # dx_{j+1} - dx_j
+    Fi_diff_m1 = xI .- xI[vcat(end,1:end-1)]   # dx_j - dx_{j-1}
+    Fi_diff_p1 = xI[vcat(2:end,1)] .- xI       # dx_{j+1} - dx_j
+    du[1:div(end,2)] .= p.m .* real.(Fr_diff_p1 .- Fr_diff_m1 .+ im .* (Fi_diff_p1 .- Fi_diff_m1)) ./ p.a^2 .- real.(p.mu .* xR .+ im .* (p.mu .* xI))
+    du[div(end,2)+1:end] .= p.m .* imag.(im .* (Fi_diff_p1 .- Fi_diff_m1) .+ (Fr_diff_p1 .- Fr_diff_m1)) ./ p.a^2 .- imag.(p.mu .* xR .+ im .* (p.mu .* xI))
+end
+# ActionDerSchem([1,2,1,1,2,1],params)
+
+function RandScale(du, u, param, t)
+    a = param.p.a
+    du[1:div(end,2)] .= sqrt.(2. ./ a)
+end
+
+function LangevinSchem(N,a,m,mu,la,gaussianD)
+    n_tau = 16
+    F0 = append!([20. for i = 1:n_tau],[0. for i = 1:n_tau])
+    # Flist = Matrix{Float64}(undef,N+1,n_tau)
+    # Flist[1,:] = F0
+    dt = 0.01
+    timespan = (0.0,3*N)
+    # params = Lvector(p=struct w fields m μ λ)
+    params = LVector(p=AHO_CL_Param(a,m,mu,la))
+    # Function to calculate change in action for whole path
+    sdeprob1 = SDEProblem(ActionDerSchem,RandScale,F0,timespan,params)
+
+    @time sol = solve(sdeprob1, Euler(), progress=true, saveat=0.01/dt, save_start=false,
+                dtmax=1e-3, dt=dt, abstol=5e-2,reltol=5e-2)
+end
+
+mu = exp(im*π/3)
+Solution1 = LangevinSchem(80000,0.5,1,mu,0,gaussianD)
+plot(Solution1)
+Solution1.u
+
+begin
+    n_tau = 16
+    n_burn = 2
+    Set1 = Matrix{Float64}(undef,length(Solution1.u[n_burn:end]),length(Solution1.u[1]))
+    for i = n_burn:length(Solution1.u)
+        Set1[i-n_burn+1,:] = Solution1.u[i]
+    end
+    Set1r = Set1[:,1:n_tau]
+    # Plot AutoCorrelation
+    autocorrdata = AutoCorrR(Set1r)
+    jkf1 = Jackknife1(autocorrdata)
+    # jkf1[:,1]
+    display(plot(jkf1[:,1],yerr=jkf1[:,2],xlabel="τ",ylabel="Aₒ(τ)",legend=false))#,title="AutoCorrelation"
+    savefig("plots/$(save_date)_CL_mu$(round(mu,digits=3))_NewS_AC.pdf")
+    savefig("plots/$(save_date)_CL_mu$(round(mu,digits=3))_NewS_AC.png")
+
+    # Plot TPCF
+    arr1 = reshape(Set1r,:)
+    histogram(arr1,bins=[i for i=floor(minimum(arr1)*10)/10:0.1:(floor(maximum(arr1)*10)+1)/10],normed=true,xlabel="x",ylabel="|ψ₀|²",legend=false)
+    display(PlotProbDDe(1,1,1,2))
+    savefig("plots/$(save_date)_CL_mu$(round(mu,digits=3))_NewS_PDD.pdf")
+    savefig("plots/$(save_date)_CL_mu$(round(mu,digits=3))_NewS_PDD.png")
+
+    println("⟨x⟩ = ",Err1(arr1)[1]," with err: ",Err1(arr1)[2])         # - 4.9*10^-4   ± 0.002048
+    println("⟨x²⟩ = ",Err1(arr1.^2)[1]," with err: ",Err1(arr1.^2)[2])  # 0.5102        ± 0.002060
+
+    println("⟨x⟩ = ",Jackknife1(arr1)[1]," with err: ",Jackknife1(arr1)[2])         # - 4.9*10^-4   ± 0.002048
+    println("⟨x²⟩ = ",Jackknife1(arr1.^2)[1]," with err: ",Jackknife1(arr1.^2)[2])  # 0.5102        ± 0.002060
+end
+
+
+
+
+
+
+function ActionDerSchem(du, u, params, t)
+    p = params.p
+    xR = @view u[1:div(end,2)]
+    xI = @view u[div(end,2)+1:end]
+    Fr_diff_m1 = xR .- xR[vcat(end,1:end-1)]   # dx_j - dx_{j-1}
+    Fr_diff_p1 = xR[vcat(2:end,1)] .- xR       # dx_{j+1} - dx_j
+    Fi_diff_m1 = xI .- xI[vcat(end,1:end-1)]   # dx_j - dx_{j-1}
+    Fi_diff_p1 = xI[vcat(2:end,1)] .- xI       # dx_{j+1} - dx_j
+    du[1:div(end,2)] .= p.m .* real.(Fr_diff_p1 .- Fr_diff_m1 .+ im .* (Fi_diff_p1 .- Fi_diff_m1)) ./ p.a^2 .- real.(p.mu .* xR .+ im .* (p.mu .* xI))
+    du[div(end,2)+1:end] .= p.m .* imag.(im .* (Fi_diff_p1 .- Fi_diff_m1) .+ (Fr_diff_p1 .- Fr_diff_m1)) ./ p.a^2 .- imag.(p.mu .* xR .+ im .* (p.mu .* xI))
+end
+
+
+function RandScaleGaussMod(du, u, param, t)
+    # a = param.p.a
+    du[1:div(end,2)] .= sqrt.(2.)
+end
+
+function GaussianModel(du, u, params, t)
+    p = params.p
+    xR = @view u[1:div(end,2)]
+    xI = @view u[div(end,2)+1:end]
+    du[1:div(end,2)] .= -1 .* real.(p.mu .* (im .* xI .+ xR))
+    du[div(end,2)+1:end] .= -1 .* imag.(p.mu .* (im .* xI .+ xR))
+end
+
+#### Complex plane solutions for μ complex
+function LangevinGaussSchem(N,a,m,mu,la,gaussianD)
+    n_tau = 16
+    F0 = zeros(Float64,2*n_tau)
+    F0[1:n_tau] .= 20.
+    # F0 = append!([20. for i = 1:n_tau],[0. for i = 1:n_tau])
+    # Flist = Matrix{Float64}(undef,N+1,n_tau)
+    # Flist[1,:] = F0
+    dt = 0.01
+    timespan = (0.0,3*N)
+    # params = Lvector(p=struct w fields m μ λ)
+    params = LVector(p=AHO_CL_Param(a,m,mu,la))
+    # Function to calculate change in action for whole path
+    sdeprob1 = SDEProblem(GaussianModel,RandScaleGaussMod,F0,timespan,params)
+
+    @time sol = solve(sdeprob1, Euler(), progress=true, saveat=0.01/dt, save_start=false,
+                dtmax=1e-3, dt=dt, abstol=5e-2,reltol=5e-2)
+end
+
+
+for i = 0:11
+    println("Beginning i = ",i)
+    n_burn = 20
+    arr2=[]
+    # ComplexSys = Matrix{Float64}(undef,0,0)
+    for runs = 1:3
+        # ComplexSys = CLangevin(2000,0.5,1,exp(i*im*π/6),0,gaussianD,"CL_2")
+        ComplexSys = LangevinGaussSchem(8000,0.5,1,exp(i*im*π/6),0,gaussianD)[n_burn:end,:]
+        println("Simulated ",i,"/11.",runs,"/3")
+        println("ComplexSys lengths: ",length(ComplexSys[1,:]),", ",length(ComplexSys[1,1:div(end,2)]),", ",length(ComplexSys[1,div(end,2)+1:end]))
+        z = (ComplexSys[:,1:div(end,2)] .+ (im .* ComplexSys[:,div(end,2)+1:end])) .^2
+        append!(arr2,append!([mean(z)], Err1(real.(z))[2], Err1(imag.(z))[2]))     # ⟨x²⟩
+        println("i = ",i,", ⟨x²⟩ = ",arr2[end][1])
+        if i==0
+            autocorrdata = AutoCorrR(ComplexSys[:,1:div(end,2)])
+            jkf1 = Jackknife1(autocorrdata)
+            plt1 = plot(jkf1[:,1],yerr=jkf1[:,2],xlabel="τ",ylabel="Aₒ(τ)",legend=false)#,title="AutoCorrelation"
+            savefig(plt1,"plots/22.05.07_CL_mu$(round(mu,digits=3))_NewS_GaussModl_AC.pdf")
+            savefig(plt1,"plots/22.05.07_CL_mu$(round(mu,digits=3))_NewS_GaussModl_AC.png")
+        end
+    end
+    # display(scatter(ComplexSys[1],ComplexSys[2]))
+    # arr1 = float.(ComplexSys[1])
+    if i==0
+        # Calculate the analytical result 1/μ = ⟨z²⟩, where μ = exp(nπi/6), n = (0,11)
+        # ⟹ 1/μ = exp(-nπi/6), n = (0,11)
+        scatter([cos(ii*π/6) for ii=0:11],[sin(ii*π/6) for ii=0:11],color="red",marker=:x,legend=false)#:inside)
+        # scatter([real(exp(-im*ii*π/6)) for ii=0:11],[imag(exp(-im*ii*π/6)) for ii=0:11],color="red",legend=:inside,marker=:x)
+    end
+    println("i: ",i,"e^z:",exp(i*im))
+    # display(histogram(arr1,bins=[i for i=floor(minimum(arr1)*10)/10:incsize1:(floor(maximum(arr1)*10)+1)/10],normed=true,xlabel="x",ylabel="|ψ_0|²"))
+    if in(i,[0,1,2,3,9,10,11])
+        arr3 = [mean(arr2),Err1(real.(arr2))[2],Err1(imag.(arr2))[2]]
+        fig1 = scatter!([real(arr3[1])],[imag(arr3[1])],xerr=arr3[2],yerr=arr3[3],color="blue",marker=:cross)
+        # fig1 = scatter!([real(arr2[1])],[imag(arr2[1])],xerr=arr2[2],yerr=arr2[3],color="blue",marker=:cross)
+        display(fig1)
+        if true
+            if i == 11
+                savefig(fig1,"plots/22.05.07_CL_NewS_Cmodel.pdf") # This is how to save a Julia plot as pdf !!!
+            end
+        end
+    end
+end
