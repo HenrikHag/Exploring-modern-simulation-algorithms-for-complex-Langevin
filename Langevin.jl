@@ -708,7 +708,7 @@ end
 
 #### Complex plane solutions for μ complex
 function LangevinGaussSchem(N,a,m,mu,la,gaussianD)
-    n_tau = 1
+    n_tau = 16
     F0 = zeros(Float64,2*n_tau)
     F0[1:n_tau] .= 20.
     # F0 = append!([20. for i = 1:n_tau],[0. for i = 1:n_tau])
@@ -720,22 +720,23 @@ function LangevinGaussSchem(N,a,m,mu,la,gaussianD)
     params = LVector(p=AHO_CL_Param(a,m,mu,la))
     # Function to calculate change in action for whole path
     sdeprob1 = SDEProblem(GaussianModel,RandScaleGaussMod,F0,timespan,params)
-    # @time sol = solve(sdeprob1, Euler(), progress=true, saveat=0.01/dt, save_start=false,
-                  # dtmax=1e-3, dt=dt, abstol=5e-1,reltol=5e-1)#,maxiters=10^8)
-    ensemble_prob = EnsembleProblem(sdeprob1)
-    @time sol = solve(ensemble_prob, Euler(), progress=true, saveat=0.01/dt, save_start=false,
-                EnsembleThreads(), trajectories=64,
+    @time sol = solve(sdeprob1, Euler(), progress=true, saveat=0.01/dt, save_start=false,
                 dtmax=1e-3, dt=dt, abstol=5e-1,reltol=5e-1)#,maxiters=10^8)
+    # ensemble_prob = EnsembleProblem(sdeprob1)
+    # @time sol = solve(ensemble_prob, Euler(), progress=true, saveat=0.01/dt, save_start=false,
+                # EnsembleThreads(), trajectories=1,
+                # dtmax=1e-3, dt=dt, abstol=5e-1,reltol=5e-1)#,maxiters=10^8)
 end
 
 
 for i = 0:11
     println("Beginning i = ",i)
     n_burn = 20
-    arr2=[]
+    n_runs = 4
+    arr2 = Matrix{Complex}(undef,n_runs,3)
     mu = exp(i*im*π/6)
     # ComplexSys = Matrix{Float64}(undef,0,0)
-    for runs = 1:3
+    for runs = 1:n_runs
         # ComplexSys = CLangevin(2000,0.5,1,exp(i*im*π/6),0,gaussianD,"CL_2")
         Solution1 = LangevinGaussSchem(8000,0.5,1,mu,0,gaussianD)
         # ComplexSys = Solution1.u[n_burn:end,:]
@@ -743,12 +744,14 @@ for i = 0:11
         for i = n_burn:length(Solution1.u)
             ComplexSys[i-n_burn+1,:] = Solution1.u[i]
         end
-        show(IOContext(stdout, :limit => true),"text/plain",Path);println("\nMatrix of ",length(ComplexSys[:,1]),"rows")
-        println("Simulated ",i,"/11.",runs,"/3")
+        if i==0 && runs==1
+            show(IOContext(stdout, :limit => true),"text/plain",ComplexSys);println("\nMatrix of ",length(ComplexSys[:,1])," rows")
+        end
+        println("Simulated ",i,"/11.",runs,"/",n_runs)
         println("ComplexSys lengths: ",length(ComplexSys[1,:]),", ",length(ComplexSys[1,1:div(end,2)]),", ",length(ComplexSys[1,div(end,2)+1:end]))
-        z = (ComplexSys[:,1:div(end,2)] .+ (im .* ComplexSys[:,div(end,2)+1:end])) .^2
-        append!(arr2,append!([mean(z)], Err1(real.(z))[2], Err1(imag.(z))[2]))     # ⟨x²⟩
-        println("i = ",i,", ⟨x²⟩ = ",arr2[end][1])
+        z = (ComplexSys[:,1:div(end,2)] .+ (im .* ComplexSys[:,div(end,2)+1:end])).^2
+        arr2[runs,:]=[mean(z), Err1(real.(z))[2], Err1(imag.(z))[2]]     # ⟨x²⟩
+        println("i = ",i,", ⟨x²⟩ = ",round(arr2[runs,1],digits=3))
         if i==0
             autocorrdata = AutoCorrR(ComplexSys[:,1:div(end,2)])
             jkf1 = Jackknife1(autocorrdata)
@@ -762,19 +765,29 @@ for i = 0:11
     if i==0
         # Calculate the analytical result 1/μ = ⟨z²⟩, where μ = exp(nπi/6), n = (0,11)
         # ⟹ 1/μ = exp(-nπi/6), n = (0,11)
-        scatter([cos(ii*π/6) for ii=0:11],[sin(ii*π/6) for ii=0:11],color="red",marker=:x,legend=false)#:inside)
+        fig1 = scatter([cos(ii*π/6) for ii=0:11],[sin(ii*π/6) for ii=0:11],color="red",marker=:x,legend=false)#:inside)
+        fig2 = scatter([cos(ii*π/6) for ii=0:11],[sin(ii*π/6) for ii=0:11],color="red",marker=:x,legend=false)#:inside) 
         # scatter([real(exp(-im*ii*π/6)) for ii=0:11],[imag(exp(-im*ii*π/6)) for ii=0:11],color="red",legend=:inside,marker=:x)
     end
-    println("i: ",i,"e^z:",exp(i*im))
+    println("i: ",i," μ = e^z: ",round(exp(i*im),digits=3))
     # display(histogram(arr1,bins=[i for i=floor(minimum(arr1)*10)/10:incsize1:(floor(maximum(arr1)*10)+1)/10],normed=true,xlabel="x",ylabel="|ψ_0|²"))
     if in(i,[0,1,2,3,9,10,11])
-        arr3 = [mean(arr2),Err1(real.(arr2))[2],Err1(imag.(arr2))[2]]
-        fig1 = scatter!([real(arr3[1])],[imag(arr3[1])],xerr=arr3[2],yerr=arr3[3],color="blue",marker=:cross)
+        arr3 = [mean(arr2[:,1]),Err1(real.(arr2[:,1]))[2],Err1(imag.(arr2[:,1]))[2]]
+        fig1 = scatter!(fig1,[real(arr3[1])],[imag(arr3[1])],xerr=arr3[2],yerr=arr3[3],color="blue",marker=:cross)
         # fig1 = scatter!([real(arr2[1])],[imag(arr2[1])],xerr=arr2[2],yerr=arr2[3],color="blue",marker=:cross)
         display(fig1)
         if true
             if i == 11
-                savefig(fig1,"plots/$(save_date)_CL_NewS_Cmodel.pdf") # This is how to save a Julia plot as pdf !!!
+                savefig(fig1,"plots/$(save_date)_CL_NewS_Cmodel1.pdf") # This is how to save a Julia plot as pdf !!!
+            end
+        end
+
+        if in(i,[0,1,2,10,11])
+            fig2 = scatter!(fig2,[real(arr3[1])],[imag(arr3[1])],xerr=arr3[2],yerr=arr3[3],color="blue",marker=:cross)
+            if true
+                if i == 11
+                    savefig(fig2,"plots/$(save_date)_CL_NewS_Cmodel2.pdf") # This is how to save a Julia plot as pdf !!!
+                end
             end
         end
     end
