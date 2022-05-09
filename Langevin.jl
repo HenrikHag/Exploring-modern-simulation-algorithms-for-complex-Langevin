@@ -680,17 +680,17 @@ end
 
 
 
-function ActionDerSchem(du, u, params, t)
-    p = params.p
-    xR = @view u[1:div(end,2)]
-    xI = @view u[div(end,2)+1:end]
-    Fr_diff_m1 = xR .- xR[vcat(end,1:end-1)]   # dx_j - dx_{j-1}
-    Fr_diff_p1 = xR[vcat(2:end,1)] .- xR       # dx_{j+1} - dx_j
-    Fi_diff_m1 = xI .- xI[vcat(end,1:end-1)]   # dx_j - dx_{j-1}
-    Fi_diff_p1 = xI[vcat(2:end,1)] .- xI       # dx_{j+1} - dx_j
-    du[1:div(end,2)] .= p.m .* real.(Fr_diff_p1 .- Fr_diff_m1 .+ im .* (Fi_diff_p1 .- Fi_diff_m1)) ./ p.a^2 .- real.(p.mu .* xR .+ im .* (p.mu .* xI))
-    du[div(end,2)+1:end] .= p.m .* imag.(im .* (Fi_diff_p1 .- Fi_diff_m1) .+ (Fr_diff_p1 .- Fr_diff_m1)) ./ p.a^2 .- imag.(p.mu .* xR .+ im .* (p.mu .* xI))
-end
+# function ActionDerSchem(du, u, params, t)
+#     p = params.p
+#     xR = @view u[1:div(end,2)]
+#     xI = @view u[div(end,2)+1:end]
+#     Fr_diff_m1 = xR .- xR[vcat(end,1:end-1)]   # dx_j - dx_{j-1}
+#     Fr_diff_p1 = xR[vcat(2:end,1)] .- xR       # dx_{j+1} - dx_j
+#     Fi_diff_m1 = xI .- xI[vcat(end,1:end-1)]   # dx_j - dx_{j-1}
+#     Fi_diff_p1 = xI[vcat(2:end,1)] .- xI       # dx_{j+1} - dx_j
+#     du[1:div(end,2)] .= p.m .* real.(Fr_diff_p1 .- Fr_diff_m1 .+ im .* (Fi_diff_p1 .- Fi_diff_m1)) ./ p.a^2 .- real.(p.mu .* xR .+ im .* (p.mu .* xI))
+#     du[div(end,2)+1:end] .= p.m .* imag.(im .* (Fi_diff_p1 .- Fi_diff_m1) .+ (Fr_diff_p1 .- Fr_diff_m1)) ./ p.a^2 .- imag.(p.mu .* xR .+ im .* (p.mu .* xI))
+# end
 
 
 function RandScaleGaussMod(du, u, param, t)
@@ -708,7 +708,7 @@ end
 
 #### Complex plane solutions for μ complex
 function LangevinGaussSchem(N,a,m,mu,la,gaussianD)
-    n_tau = 16
+    n_tau = 1
     F0 = zeros(Float64,2*n_tau)
     F0[1:n_tau] .= 20.
     # F0 = append!([20. for i = 1:n_tau],[0. for i = 1:n_tau])
@@ -720,9 +720,12 @@ function LangevinGaussSchem(N,a,m,mu,la,gaussianD)
     params = LVector(p=AHO_CL_Param(a,m,mu,la))
     # Function to calculate change in action for whole path
     sdeprob1 = SDEProblem(GaussianModel,RandScaleGaussMod,F0,timespan,params)
-
-    @time sol = solve(sdeprob1, Euler(), progress=true, saveat=0.01/dt, save_start=false,
-                dtmax=1e-3, dt=dt, abstol=5e-2,reltol=5e-2)
+    # @time sol = solve(sdeprob1, Euler(), progress=true, saveat=0.01/dt, save_start=false,
+                  # dtmax=1e-3, dt=dt, abstol=5e-1,reltol=5e-1)#,maxiters=10^8)
+    ensemble_prob = EnsembleProblem(sdeprob1)
+    @time sol = solve(ensemble_prob, Euler(), progress=true, saveat=0.01/dt, save_start=false,
+                EnsembleThreads(), trajectories=64,
+                dtmax=1e-3, dt=dt, abstol=5e-1,reltol=5e-1)#,maxiters=10^8)
 end
 
 
@@ -730,10 +733,17 @@ for i = 0:11
     println("Beginning i = ",i)
     n_burn = 20
     arr2=[]
+    mu = exp(i*im*π/6)
     # ComplexSys = Matrix{Float64}(undef,0,0)
     for runs = 1:3
         # ComplexSys = CLangevin(2000,0.5,1,exp(i*im*π/6),0,gaussianD,"CL_2")
-        ComplexSys = LangevinGaussSchem(8000,0.5,1,exp(i*im*π/6),0,gaussianD)[n_burn:end,:]
+        Solution1 = LangevinGaussSchem(8000,0.5,1,mu,0,gaussianD)
+        # ComplexSys = Solution1.u[n_burn:end,:]
+        ComplexSys = Matrix{Float64}(undef,length(Solution1.u[n_burn:end]),length(Solution1.u[1]))
+        for i = n_burn:length(Solution1.u)
+            ComplexSys[i-n_burn+1,:] = Solution1.u[i]
+        end
+        show(IOContext(stdout, :limit => true),"text/plain",Path);println("\nMatrix of ",length(ComplexSys[:,1]),"rows")
         println("Simulated ",i,"/11.",runs,"/3")
         println("ComplexSys lengths: ",length(ComplexSys[1,:]),", ",length(ComplexSys[1,1:div(end,2)]),", ",length(ComplexSys[1,div(end,2)+1:end]))
         z = (ComplexSys[:,1:div(end,2)] .+ (im .* ComplexSys[:,div(end,2)+1:end])) .^2
@@ -743,8 +753,8 @@ for i = 0:11
             autocorrdata = AutoCorrR(ComplexSys[:,1:div(end,2)])
             jkf1 = Jackknife1(autocorrdata)
             plt1 = plot(jkf1[:,1],yerr=jkf1[:,2],xlabel="τ",ylabel="Aₒ(τ)",legend=false)#,title="AutoCorrelation"
-            savefig(plt1,"plots/22.05.07_CL_mu$(round(mu,digits=3))_NewS_GaussModl_AC.pdf")
-            savefig(plt1,"plots/22.05.07_CL_mu$(round(mu,digits=3))_NewS_GaussModl_AC.png")
+            savefig(plt1,"plots/$(save_date)_CL_mu$(round(mu,digits=3))_NewS_GaussModl_AC.pdf")
+            savefig(plt1,"plots/$(save_date)_CL_mu$(round(mu,digits=3))_NewS_GaussModl_AC.png")
         end
     end
     # display(scatter(ComplexSys[1],ComplexSys[2]))
@@ -764,7 +774,7 @@ for i = 0:11
         display(fig1)
         if true
             if i == 11
-                savefig(fig1,"plots/22.05.07_CL_NewS_Cmodel.pdf") # This is how to save a Julia plot as pdf !!!
+                savefig(fig1,"plots/$(save_date)_CL_NewS_Cmodel.pdf") # This is how to save a Julia plot as pdf !!!
             end
         end
     end
