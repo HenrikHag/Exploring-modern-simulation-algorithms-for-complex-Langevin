@@ -1,14 +1,37 @@
 # File for benchmarking functions in Metropolis Algorithm
 
 begin
-    using .MetropolisUpdate
+    using MetroLangCLsimulation
+    # using .MetropolisUpdate
     using .UsersGuide
     using Plots
     using BenchmarkTools
+    using Random
     using Base.Threads
 end
 
 # Define functions to test
+
+
+
+
+# New difActionAHO() calculating difference in action
+benchrng = MersenneTwister(11111)
+n_tau=16; a=0.5; m=1; ω=1; λ=0;
+Path = [2*(rand(benchrng)-1/2) for i=1:n_tau]
+i = 3
+ip1 = ((i)%n_tau)+1
+im1 = ((i-2+n_tau)%n_tau)+1
+x_new = 1*(Path[i]+rand(benchrng))
+
+# ~95.3 ns
+@benchmark (AHO_Action($n_tau,$m,$ω,$a,$λ,$Path,$i,$x_new)-AHO_Action($n_tau,$m,$ω,$a,$λ,$Path,$i,$Path[i]))
+
+# ~7.19 ns
+@benchmark difActionAHO($n_tau,$a,$m,$ω,$λ,$Path,$i,$x_new)
+
+
+
 
 
 
