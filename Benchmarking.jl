@@ -274,6 +274,7 @@ Jackknifeold(twopointD[:,1])    # Now named Jackknifeold
 Jackknife1(twopointD[:,1])      # New Jackknife1
 @benchmark Jackknifeold(twopointD[:,1]) # Old Jackknife1
 @benchmark Jackknife1(twopointD[:,1])   # New Jackknife1
+@benchmark Jackknife1($[Float64.(i) for i=1:6000])   # New Jackknife1
 
 function Errold(array1::AbstractArray)
     mean1 = mean(array1)

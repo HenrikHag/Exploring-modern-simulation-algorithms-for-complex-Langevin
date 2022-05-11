@@ -30,7 +30,7 @@ end
 # This program will run a Monte Carlo Simulation, simulating a system of different parameters.
 # 
 # The Action:   The action of the system simulated. Here the physics of the system is defined.
-#   Example:    HO_Action()
+#   Implemented:    HO_Action(), AHO_Action()
 # 
 # n_tau:        The number of parts in the timelattice
 # iδτ:          The index of Euclidean time, i ∈ [1,...,n_tau]
