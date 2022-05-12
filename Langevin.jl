@@ -5,7 +5,7 @@ begin
     # using .UsersGuide
     using Distributions
     using Plots
-    using DifferentialEquations, StochasticDiffEq
+    using StochasticDiffEq#, DifferentialEquations
     using LabelledArrays
     save_path = "results/"
     gaussianD = Normal(0,1)
@@ -13,6 +13,28 @@ begin
 end
 
 # import Pkg; Pkg.activate("."); Pkg.instantiate()
+
+
+struct HO_Param
+    a::Float64
+    m::Float64
+    mu::Float64
+end
+
+struct AHO_Param
+    a::Float64  # Lattice spacing
+    m::Float64  # Mass
+    mu::Float64 # HO coupling
+    λ::Float64  # AHO coupling
+end
+
+struct AHO_CL_Param
+    a::Float64
+    m::Float64
+    mu::Complex
+    λ::Float64
+end
+
 
 
 #       a(1/2*m*(P[i+1]-P[i])²/a² + m*μ/2*ϕ² + m*λ/4!*ϕ⁴)
@@ -130,11 +152,7 @@ ActionDer(a,m,mu,la,u0,1,1)
 
 
 
-struct param
-    a::Float64
-    m::Float64
-    mu::Float64
-end
+
 
 function Langevin(N,a,m,mu,la,gaussianD)
     n_tau = 16
@@ -183,12 +201,7 @@ end
 
 
 
-struct AHO_Param
-    a::Float64  # Lattice spacing
-    m::Float64  # Mass
-    mu::Float64 # μ
-    λ::Float64
-end
+
 
 function ActionDerSchem(du, u, params, t)
     p = params.p
@@ -588,13 +601,6 @@ a = [0.990894    0.00115783;
 ## Complex Langevin solver package ###
 ######################################
 
-
-struct AHO_CL_Param
-    a::Float64  # Lattice spacing
-    m::Float64  # Mass
-    mu::Complex # μ
-    λ::Float64
-end
 
 function ActionDerSchem(du, u, params, t)
     p = params.p
