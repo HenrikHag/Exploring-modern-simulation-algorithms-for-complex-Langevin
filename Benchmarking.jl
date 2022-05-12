@@ -1,9 +1,9 @@
 # File for benchmarking functions in Metropolis Algorithm
 
 begin
-    using MetroLangCLsimulation
+    using MCMC
     # using .MetropolisUpdate
-    using .UsersGuide
+    # using .UsersGuide
     using Plots
     using BenchmarkTools
     using Random

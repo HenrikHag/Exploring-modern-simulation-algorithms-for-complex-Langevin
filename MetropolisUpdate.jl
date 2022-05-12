@@ -1,8 +1,8 @@
 module MetropolisUpdate
 
-using Random, Printf, Plots, Gnuplot, Statistics, FFTW
+using Printf, Gnuplot, FFTW, Plots, Random, Statistics
 
-export Random, Printf, Plots, Gnuplot
+export Printf, Gnuplot, Plots, Random 
 # export n_tau, idrate, h, m, ω, accept, sum1, sum2, sum3
 export Exp_x2, AutoCorrR, HO_Action, AHO_Action, difActionAHO, MeasureObs, E_Vals#, MeasureObs
 export printarray, writee123tofile, writec123tofile, writec3s3tofile, writes3e3tofile, writeeMean
@@ -123,7 +123,7 @@ function HO_Action(n_tau, m, ω, a, Path, coord, x)
     # print(n_m1)
     return 0.5*m*a*(((Path[((coord)%n_tau)+1]-x)/a)^2
     + ((x-Path[((coord-2+n_tau)%n_tau)+1])/a)^2
-    + ω^2*(x)^2)
+    + ω^2*x^2)
 end
 # Action(Path,2,Path[2])
 # print(Path[((2-2)%16+1)])
@@ -131,13 +131,20 @@ end
 function AHO_Action(n_tau, m, ω, a, λ, Path, coord, x)
     return 0.5*m*a*(((Path[((coord)%n_tau)+1]-x)/a)^2
     + ((x-Path[((coord-2+n_tau)%n_tau)+1])/a)^2
-    + ω^2*(x)^2) + 1/(4*a^4)*λ*x^4
+    + ω^2*x^2)# + 1/(4*a^4)*λ*x^4
 end
 
-function difActionAHO(n_tau,a,m,ω,λ,Path,index,proposedx)
-    return m*((proposedx^2-Path[index]^2+(Path[index]-proposedx)*(Path[((index)%n_tau)+1]+Path[((index-2+n_tau)%n_tau)+1]))/a
-    + 0.5*a*ω^2*(proposedx^2-Path[index]^2))
+"""
+    return change in HO action (s_new-s_old) by trial x_new  
+    (AHO not implemented)
+"""
+function difActionAHO(n_tau,a,m,ω,λ,Path,index,x_new)
+    return m*((x_new^2-Path[index]^2+(Path[index]-x_new)*(Path[(index %n_tau)+1]+Path[((index-2+n_tau)%n_tau)+1]))/a
+    + 0.5*a*ω^2*(x_new^2-Path[index]^2))
 end
+
+
+
 
 #                                   #
 # Measure the current observables   #

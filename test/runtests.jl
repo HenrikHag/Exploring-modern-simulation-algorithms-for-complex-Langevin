@@ -1,4 +1,4 @@
-using MetroLangCLsimulation
+using MCMC
 using Random
 using Test
 

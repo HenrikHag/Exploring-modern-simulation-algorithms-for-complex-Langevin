@@ -4,14 +4,14 @@
 /Manifest.toml
 /MonteCarlo.jl
 /MonteCarloMultiT.jl
-/Project.toml
 /Test.jl
 /corr1.png
 /julia-1.7.0-linux-x86_64.tar.gz
 /results
 /plots
 /results.csv
-/src
+/src/div_1.jl
+/src/myProject.jl
 /test.jl
 /v1.6.4
 saved_results/03.11CL_1.csv
