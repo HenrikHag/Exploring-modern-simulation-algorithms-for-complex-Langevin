@@ -3,9 +3,9 @@ module MCMC
 using FFTW, Plots, Random, Statistics
 
 
-# include("div_1.jl")
-include("MetropolisUpdate.jl")
+include("Metropolis.jl")
 include("analysis.jl")
+include("div_1.jl")
 # include("UsersGuide.jl")
 
 
