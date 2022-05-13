@@ -1,10 +1,11 @@
 
-using Printf, FFTW, Plots, Random, Statistics
+using FFTW, Plots, Printf, Random, Statistics
 
-export Printf, FFTW, Plots, Random, Statistics
+export FFTW, Plots, Printf, Random, Statistics
 # export n_tau, idrate, h, m, ω, accept, sum1, sum2, sum3
 export HO_Action, AHO_Action, difActionAHO, MeasureObs, E_Vals#, MeasureObs
-export printarray, writee123tofile, writec123tofile, writec3s3tofile, writes3e3tofile, writeeMean
+export printarray, printmatrix
+export writee123tofile, writec123tofile, writec3s3tofile, writes3e3tofile, writeeMean
 
 
 
@@ -153,8 +154,9 @@ function printarray(array)
     return
 end
 
-
-
+function printmatrix(matrix)
+    show(IOContext(stdout, :limit => true),"text/plain",matrix);println();
+end
 
 
 

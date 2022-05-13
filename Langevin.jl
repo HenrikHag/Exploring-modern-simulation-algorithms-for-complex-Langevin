@@ -716,15 +716,17 @@ function LangevinGaussSchem(N,a,m,mu,la,gaussianD)
     params = LVector(p=AHO_CL_Param(a,m,mu,la))
     # Function to calculate change in action for whole path
     sdeprob1 = SDEProblem(GaussianModel,RandScaleGaussMod,F0,timespan,params)
-    @time sol = solve(sdeprob1, Euler(), progress=true, saveat=0.01/dt, save_start=false,
-                dtmax=1e-3, dt=dt, abstol=5e-1,reltol=5e-1)#,maxiters=10^8)
+    @time sol = solve(sdeprob1, ImplicitEM(theta = 1,symplectic=false,), progress=true, saveat=0.01/dt, save_start=false,
+                dtmax=1e-3, dt=dt, abstol=5e-1,reltol=5e-1,
+                adaptive=false)#,maxiters=10^8)
     # ensemble_prob = EnsembleProblem(sdeprob1)
     # @time sol = solve(ensemble_prob, Euler(), progress=true, saveat=0.01/dt, save_start=false,
                 # EnsembleThreads(), trajectories=1,
                 # dtmax=1e-3, dt=dt, abstol=5e-1,reltol=5e-1)#,maxiters=10^8)
 end
 
-
+fig1 = 0
+fig2 = 0
 for i = 0:11
     println("Beginning i = ",i)
     n_burn = 20
@@ -775,6 +777,7 @@ for i = 0:11
         if true
             if i == 11
                 savefig(fig1,"plots/$(save_date)_CL_NewS_Cmodel1.pdf") # This is how to save a Julia plot as pdf !!!
+                savefig(fig1,"plots/$(save_date)_CL_NewS_Cmodel1.png") # This is how to save a Julia plot as pdf !!!
             end
         end
 
@@ -783,6 +786,7 @@ for i = 0:11
             if true
                 if i == 11
                     savefig(fig2,"plots/$(save_date)_CL_NewS_Cmodel2.pdf") # This is how to save a Julia plot as pdf !!!
+                    savefig(fig2,"plots/$(save_date)_CL_NewS_Cmodel2.png") # This is how to save a Julia plot as pdf !!!
                 end
             end
         end

@@ -25,6 +25,9 @@ begin
     # n=rand(d,1000)
 end
 
+# printarray([1.1,-1.02,1.50,-0.4])
+# printarray([-1.02,1.50,-0.4,1.1])
+
 ##############################################################
 # 
 # This program will run a Monte Carlo Simulation, simulating a system of different parameters.
