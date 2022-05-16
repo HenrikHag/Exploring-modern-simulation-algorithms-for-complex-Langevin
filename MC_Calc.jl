@@ -15,6 +15,9 @@ expf = "results/expfullHO_10_1.csv"
 #               Plotting of data                #
 #                                               #
 
+mean(GetData(measf,4,2)[:,1])
+mean(GetData(measf,4,1)[:,1].^2)
+
 #############################
 #       AutoCorrelation     #
 #############################
@@ -87,6 +90,36 @@ begin
     PlotProbDD(measf,0.1)
     PlotProbDDe(1,1,1,2)
 end
+savefig("plots/22.04.27_M_pdd10_b16.pdf")
+
+arr1 = GetColumn(2+16:2*16+1,measf)
+arr1 = reshape(arr1,:)
+histogram(arr1,bins=[i for i=floor(minimum(arr1)*10)/10:0.01:(floor(maximum(arr1)*10)+1)/10],normed=true,xlabel="x²",ylabel="|ψ₀|²",legend=false)
+
+arr1 = transpose(GetColumn(2+16:2*16+1,measf))
+ACfuncTPCF = Jackknife1(real.(AutoCorrR(arr1,false,false)))
+plot(ACfuncTPCF[:,1],yerr=ACfuncTPCF[:,2])
+PlotTPCF(measf,true, false)
+begin
+    TPC1=[]
+    Path=arr1
+    pathl=length(arr1)
+    for i = 0:pathl-2       # Two-Point Correlation
+        twopointcorr=0
+        for ii=1:pathl
+            twopointcorr += Path[ii]*Path[(ii+i-1)%pathl+1]
+        end
+        append!(TPC1,twopointcorr/pathl)
+    end
+    twopointcorr=0
+    for ii=1:pathl
+        twopointcorr += Path[ii]*Path[(ii+pathl-2)%pathl+1]
+    end
+    append!(TPC1,twopointcorr/pathl)
+    TPC1
+end
+plot(TPC1)
+
 begin
     PlotProbDD("results/measuredObsb.csv",0.1)
     PlotProbDDe(m,ω,1,2)
@@ -169,7 +202,41 @@ plot(jkxdat[:,1],yerr=jkxdat[:,2])
 
 
 #   ⟨x̂⟩   #
-expxData = transpose(GetExpXData(expf,1))
-expxDatawErr = Jackknife1(expxData)
-plot(expxDatawErr[:,1],yerr=expxDatawErr[:,2])
+# expxData = transpose(GetExpXData(expf,1))
+# expxDatawErr = Jackknife1(expxData)
+# plot(expxDatawErr[:,1],yerr=expxDatawErr[:,2])
 
+begin   # ⟨x₁⟩
+    a1=[]
+    a = GetData(measf,4,1)[1:400,1]
+    for i = 1:length(a)
+        append!(a1,mean(a[1:i]))
+    end
+    scatter(a)
+    plt = plot!(a1,width=4)
+    display(plt)                                   # Save as png manually
+    # savefig(plt,"plots/22.05.03_M_expect_x1.pdf")   # Save as pdf in folder "plots"
+end
+
+begin   # ⟨x₁²⟩
+    a1=[]
+    a = GetData(measf,4,1)[1:4000,1].^2
+    for i = 1:length(a)
+        append!(a1,mean(a[1:i]))
+    end
+    scatter(a)
+    plt = plot!(a1,width=4)
+    display(plt)                                   # Save as png manually
+    # savefig(plt,"plots/22.05.03_M_expect_x2.pdf")   # Save as pdf in folder "plots"
+end
+Exp_x2(16,0.95,1,1)
+
+begin   # ⟨xᵢ⟩, ⟨xᵢ²⟩
+    a1 = Jackknife1(GetData(measf,4,1))
+    plot(a1[:,1],yerr=a1[:,2],legend=false)
+    a2 = Jackknife1(GetData(measf,4,1).^2)
+    plot!(a2[:,1],yerr=a2[:,2])
+    plt = hline!([Exp_x2e(16,0.5,1,1),0])
+    display(plt)                                   # Save as png manually
+    # savefig(plt,"plots/22.05.03_M_expect_x_i.pdf")   # Save as pdf in folder "plots"
+end
