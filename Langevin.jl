@@ -158,7 +158,7 @@ function CLangevin(N,a,m,mu,la,gaussianD,filename)
                 # F_i[ii] -= derAction[2]*dt
             end 
         end
-        if i%2000==0
+        if i%2000==-1
             println(i)
         end
     end
@@ -167,16 +167,20 @@ function CLangevin(N,a,m,mu,la,gaussianD,filename)
 end
 
 ComplexSys = CLangevin(20000,0.5,1,1,0.4,gaussianD,"CL_2")
+incsize1= 0.1
 for i = 0:0.1:π
     ComplexSys = CLangevin(20000,0.5,1,exp(i*im),0,gaussianD,"CL_2")
     display(scatter(ComplexSys[1],ComplexSys[2]))
     arr1 = float.(ComplexSys[1])
-    println("i: ",i,"e^z:",exp(i*im))
+    println("i: ",i," e^z: ",exp(i*im))
+    println("⟨xᵣ²⟩: ",mean(ComplexSys[1].^2)," ⟨xᵢₘ²⟩: ",mean(ComplexSys[2].^2))
     display(histogram(arr1,bins=[i for i=floor(minimum(arr1)*10)/10:incsize1:(floor(maximum(arr1)*10)+1)/10],normed=true,xlabel="x",ylabel="|ψ_0|²"))
 end
 # Diverges to NaN coordinates late in τ time when Re(z) → 0, Im(z) → 1
 # Scatterplot showes values collected moves from only real part to uniform real/complex parts
 # Find out for which values eᶻ should diverge
+
+# At i=0.8 to i=0.9 ⟨x²⟩ gets 10% error. At i=1.5 (π/2), ⟨x²⟩=7.3
 
 
 # scatter(ComplexSys[3],ComplexSys[4],yrange=[-0.004,0.003],xlabel="Re[ρ]",ylabel="Im[ρ]")
