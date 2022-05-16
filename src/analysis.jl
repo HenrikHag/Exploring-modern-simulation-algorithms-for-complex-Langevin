@@ -11,7 +11,8 @@ export PlotAC, PlotACsb, PlotTPCF, PlotEffM, PlotProbDD, PlotProbDDe, PlotACwt, 
 #                                               #
 #           Mean and Error Estimation           #
 #                                               #
-"""Calculate mean and error of elements in an array  
+"""
+Calculate mean and error of elements in an array  
 Pass a matrix to calculate mean and error for each column  
 """
 function Err1(array1::AbstractArray)
@@ -163,7 +164,8 @@ function GetTP1data(filename)
 end
 
 
-"""Gets the n-th n_tau columns from "filename" (expfull/measuredObs-file)  
+"""
+Gets the n-th n_tau columns from "filename" (expfull/measuredObs-file)  
 n = 1: ⟨x̂⟩  
 n = 2: ⟨x̂²⟩  
 n = 3: ⟨x₁xᵢ⟩  
@@ -184,7 +186,8 @@ function GetExpXData(filename, n, number)
 end
 
 
-"""Get last row of file with means  
+"""
+Get last row of file with means  
 Returns Float64 of elements in range 2:n_tau+1
 """
 function GetLastMean(meanf, n_tau)
@@ -299,7 +302,7 @@ end
 #            Effective mass             #
 #                                       #
 """
-    Calculates the effective mass from a two-point correlation function
+Calculates the effective mass from a two-point correlation function
 """
 function EffM(array1::AbstractVector)
     effm = Array{Float64}(undef,0)
@@ -333,7 +336,7 @@ end
 #          Expectation values of data           #
 #                                               #
 """
-Calculates the analytical expectation value ⟨x²⟩ for the Harmonic Oscillator system  
+Calculates the analytical expectation value ⟨x²⟩ for the Harmonic Oscillator  
 with mass m, frequency ω, lattice spacing a, and lattice points n_tau.
 """
 function Exp_x2e(n_tau, a, m, ω)
@@ -614,7 +617,8 @@ function PlotProbDD(file,incsize1)
 end
 
 """
-Calculates the analytical Probability Density Diagram for the HO, and appends it to a plot  
+Calculates the analytical Probability Density Diagram for the HO  
+appends it to a plot  
 """
 function PlotProbDDe(m,ω,ħ,range1)
     println("m = ",m,", ω = ",ω,", ħ = ",ħ)
@@ -629,10 +633,11 @@ end
 #                                               #
 #            Plotting mean of data              #
 #                                               #
-"""Plots final expectationvalues  
+"""
+Plots final expectationvalues  
 n = 1: ⟨x̂ᵢ⟩  
 n = 2: ⟨x̂ᵢ²⟩  
-n = 3: ⟨x̂ᵢ⟩, ⟨x̂ᵢ²⟩  
+n = 3: ⟨x̂ᵢ⟩, ⟨x̂ᵢ²⟩
 """
 function PlotExp(exp,n)
     if n == 1
@@ -655,9 +660,10 @@ function PlotExp(exp,n)
     # plot([1:length(exp),exp], title=title, label=label)
 end
 
-"""Plots running expectationvalues of x₁ or those in array "number"
-n = 1: ⟨x̂ᵢ⟩
-n = 2: ⟨x̂ᵢ²⟩
+"""
+Plots running expectationvalues of x₁ or those in array "number"  
+n = 1: ⟨x̂ᵢ⟩  
+n = 2: ⟨x̂ᵢ²⟩  
 n = 3: ⟨x₁xᵢ⟩
 """
 function plot_x(meanf)
