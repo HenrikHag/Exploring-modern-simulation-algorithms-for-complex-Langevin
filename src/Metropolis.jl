@@ -3,7 +3,7 @@ using FFTW, Plots, Printf, Random, Statistics
 
 export FFTW, Plots, Printf, Random, Statistics
 # export n_tau, idrate, h, m, ω, accept, sum1, sum2, sum3
-export HO_Action, AHO_Action, difActionAHO, MeasureObs, E_Vals#, MeasureObs
+export HO_Action, AHO_Action, difActionHO, difActionAHO, MeasureObs, E_Vals#, MeasureObs
 export printarray, printmatrix
 export writee123tofile, writec123tofile, writec3s3tofile, writes3e3tofile, writeeMean
 
@@ -71,12 +71,20 @@ function AHO_Action(n_tau, m, ω, a, λ, Path, coord, x)
 end
 
 """
-    return change in HO action (s_new-s_old) by trial x_new  
-    (AHO not implemented)
+return change in HO action (s_new-s_old) by trial x_new
+"""
+function difActionHO(n_tau,a,m,ω,Path,index,x_new)
+    return m*((x_new^2-Path[index]^2+(Path[index]-x_new)*(Path[(index %n_tau)+1]+Path[((index-2+n_tau)%n_tau)+1]))/a
+              + 0.5*a*ω^2*(x_new^2-Path[index]^2))
+end
+
+"""
+return change in AHO action (s_new-s_old) by trial x_new
 """
 function difActionAHO(n_tau,a,m,ω,λ,Path,index,x_new)
-    return m*((x_new^2-Path[index]^2+(Path[index]-x_new)*(Path[(index %n_tau)+1]+Path[((index-2+n_tau)%n_tau)+1]))/a
-    + 0.5*a*ω^2*(x_new^2-Path[index]^2))
+    return (m*((x_new^2-Path[index]^2+(Path[index]-x_new)*(Path[(index %n_tau)+1]+Path[((index-2+n_tau)%n_tau)+1]))/a
+               + 0.5*a*ω^2*(x_new^2-Path[index]^2))
+            + λ*(x_new^4-Path[index]^4)/(24. *a^4))
 end
 
 
