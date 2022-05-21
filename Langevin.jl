@@ -36,12 +36,14 @@ struct AHO_CL_Param
 end
 
 
-
-#       a(1/2*m*(P[i+1]-P[i])²/a² + m*μ/2*ϕ² + m*λ/4!*ϕ⁴)
-#       -> (m/a²*(2*P[i]-P[i+1]-P[i-1]) + mμϕ + mλ/6*ϕ³)*Δt
+"""
+`S = a(1/2*m*(P[i+1]-P[i])²/a² + μ/2*ϕ²) + λ*ϕ⁴/(4!*a⁴)`  
+`∂S/∂ϕⱼ = m*(2*P[i]-P[i+1]-P[i-1])/a² + μϕ + λ*ϕ³/(6*a³)`  
+`μ = m*ω²`
+"""
 function ActionDer(a,m,mu,la,F,f₋₁,f₊₁)
-    # return m/a*(2*F-(f₋₁+f₊₁)) + a*m*mu*F# + a*m*la/6*F^3
-    return m/a^2*(2*F-(f₋₁+f₊₁)) + m*mu*F# + m*la/6*F^3
+    # return m/a*(2*F-(f₋₁+f₊₁)) + a*mu*F# + a*la/6*F^3
+    return m*(2*F-(f₋₁+f₊₁))/a^2 + mu*F# + la*F^3/(6*a^3)
 end
 # DONE: Add coupling terms 2f(i)-f(i+1)-f(i-i)
 # Understand the discretizing integral and meeting mat. from 16.03
@@ -61,96 +63,6 @@ end
 # But here ϕ is an array, so can make a system of equations:
 # dS/dϕ_i   , S = 1/2 m δτ [((\phi_i+1 - \phi_i)^2 +(ϕ_i - ϕ_i-1)^2) / δτ^2 + ω^2ϕ_i^2]
 #               = 1/2 m δτ [((\phi_i+1 - \phi_i)^2 +(ϕ_i - ϕ_i-1)^2) / δτ^2 + ω^2ϕ_i^2]
-
-using DifferentialEquations
-dt = 0.01
-ϕ0 = 20.; a=0.5; m=1; mu=1; ϕ₊₁=20.; ϕ₋₁=20.
-f(ϕ,t,p) = (m/a*(ϕ^2-ϕ*(ϕ₊₁+ϕ₋₁)) + 0.5*m*mu*a*ϕ)*dt
-timespan = (0.0,0.01)
-prob = ODEProblem(f,ϕ0,timespan)
-sol = solve(prob,Euler(),dt=dt,abstol=1e-8,reltol=1e-8)
-# New path after drift from forward Euler:
-ϕ0 - sol(0.01)*dt   # 19.800795
-plot(sol)
-sol(0.01)
-sol = solve(prob,ImplicitEuler(),dt=dt,abstol=1e-8,reltol=1e-8)
-# New path after drift from forward Euler:
-ϕ0 - sol(0.01)*dt   # 19.800795007234047
-plot(sol)
-sol(0.01)
-# 19.800795007234047
-F = [20. for i = 1:16]
-F[2] -= ActionDer(a,m,mu,0,F[2],F[1],F[3])*dt
-F[2]    # 19.8
-
-# function Langevin(N,a,m,mu,la,gaussianD)
-#     F = [20. for i = 1:16]
-#     Flist = []
-#     push!(Flist,F)
-#     dt = 0.01
-#     prob = ODEProblem(f,ϕ0,timespan)
-#     for i=1:N
-#         for ii = 1:length(F)
-#             sol = solve(prob,Euler(),dt=dt,abstol=1e-8,reltol=1e-8)
-#             F[ii] -= sol(0.01)*dt - sqrt(2*dt/a)*rand(gaussianD)
-#             # push!(Flist,F)
-#         end
-#     end
-#     return Flist
-# end
-# Langevin(20,0.5,1,1,0,gaussianD)
-
-
-# TODO
-    # Use the newly found method to run Langevin simulations, and see if systems are more stable for
-        # ImplicitEuler
-    # And if the system is the same for
-        # Forward Euler
-
-
-
-
-# Using DifferentialEquations.jl to solve with different solvers
-using DifferentialEquations
-using Plots
-u0 = 1.5
-a=0.5; m=1; mu=1; la=0; f₋₁=1; f₊₁=1
-f(t,p,F) = m/a^2*(2*F-(f₋₁+f₊₁)) + m*mu*F
-# g(gaussianD,p,P) =
-timespan = (0.0,0.01) # Solve from time = 0 to
-# time = 1
-prob = ODEProblem(f,u0,timespan)
-dt = 0.001
-sol = solve(prob,Euler(),dt=dt,abstol=1e-8,reltol=1e-8) # Solves the ODE
-sol(0.001)
-plot(sol)
-
-using DifferentialEquations
-α=1
-u0=1/2
-f2(t,p,u) = α*u
-tspan = (0.0,1.0)
-prob = ODEProblem(f2,u0,tspan)
-sol = solve(prob,Euler(),dt=1/2^4) # Solves the ODE
-sol[5]      # 0.5234375 not .637
-sol.t[8]    # 0.4375    not .438
-sol = solve(prob,Vern7())
-plot(sol)
-
-ActionDer(a,m,mu,la,u0,1,1)
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -202,7 +114,11 @@ end
 
 
 
-
+"""
+`∂ϕ/∂ϕⱼ = ∂/∂ϕⱼ m/2 a [(ϕⱼ²-2(ϕⱼ)(ϕⱼ₊₁+ϕⱼ₋₁))/a² + μϕⱼ²]`  
+`       = m a [(ϕⱼ - ϕⱼ₊₁ - ϕⱼ₋₁)/a² + μϕⱼ]`
+[∂ϕ/∂ϕ₁,∂ϕ/∂ϕ₂]
+"""
 function ActionDerSchem(du, u, params, t)
     p = params.p
     xR = @view u[:]
@@ -270,8 +186,8 @@ end
 function Langevin(N,a,m,mu,la,gaussianD,filename)
     path = "results/"
     F = [20. for i = 1:n_tau]
-    dt = 0.01
-    timespan = (0.0,dt)
+    dt = 0.001
+    # timespan = (0.0,dt)
     n_burn = 3/dt
     n_skip = 3/dt
 
@@ -279,13 +195,13 @@ function Langevin(N,a,m,mu,la,gaussianD,filename)
     for i=1:n_burn
         for ii = 1:length(F)
             # Other solvers
-            ϕ₋₁ = F[(ii-2+n_tau)%n_tau+1]; ϕ₊₁ = F[(ii)%n_tau+1]; ϕ0 = F[ii]
-            f(ϕ,t,p) = (m/a*(ϕ^2-ϕ*(ϕ₊₁+ϕ₋₁)) + 0.5*m*mu*a*ϕ^2)*dt
-            prob = ODEProblem(f,ϕ0,timespan)
-            sol = solve(prob,Euler(),dt=dt,abstol=1e-8,reltol=1e-8)
-            F[ii] -= sol(dt)*dt - sqrt(2*dt/a)*rand(gaussianD)
+            # ϕ₋₁ = F[(ii-2+n_tau)%n_tau+1]; ϕ₊₁ = F[(ii)%n_tau+1]; ϕ0 = F[ii]
+            # f(ϕ,t,p) = (m/a*(ϕ^2-ϕ*(ϕ₊₁+ϕ₋₁)) + 0.5*m*mu*a*ϕ^2)*dt
+            # prob = ODEProblem(f,ϕ0,timespan)
+            # sol = solve(prob,Euler(),dt=dt,abstol=1e-8,reltol=1e-8)
+            # F[ii] -= sol(dt)*dt - sqrt(2*dt/a)*rand(gaussianD)
             # Own solver
-            # F[ii] -= ActionDer(a,m,mu,la,F[ii],F[(ii-2+n_tau)%n_tau+1],F[(ii)%n_tau+1])*dt - sqrt(2*dt/a)*rand(gaussianD)
+            F[ii] -= ActionDer(a,m,mu,la,F[ii],F[(ii-2+n_tau)%n_tau+1],F[(ii)%n_tau+1])*dt - sqrt(2*dt/a)*rand(gaussianD)
         end
     end
     show(F);println()
@@ -296,13 +212,13 @@ function Langevin(N,a,m,mu,la,gaussianD,filename)
         for iii = 1:n_skip+1
             for ii = 1:length(F)
                 # Other solvers
-                ϕ₋₁ = F[(ii-2+n_tau)%n_tau+1]; ϕ₊₁ = F[(ii)%n_tau+1]; ϕ0 = F[ii]
-                f(ϕ,t,p) = (m/a*(ϕ^2-ϕ*(ϕ₊₁+ϕ₋₁)) + 0.5*m*mu*a*ϕ^2)*dt
-                prob = ODEProblem(f,ϕ0,timespan)
-                sol = solve(prob,Euler(),dt=dt,abstol=1e-8,reltol=1e-8)
-                F[ii] -= sol(dt)*dt - sqrt(2*dt/a)*rand(gaussianD)
+                # ϕ₋₁ = F[(ii-2+n_tau)%n_tau+1]; ϕ₊₁ = F[(ii)%n_tau+1]; ϕ0 = F[ii]
+                # f(ϕ,t,p) = (m/a*(ϕ^2-ϕ*(ϕ₊₁+ϕ₋₁)) + 0.5*m*mu*a*ϕ^2)*dt
+                # prob = ODEProblem(f,ϕ0,timespan)
+                # sol = solve(prob,Euler(),dt=dt,abstol=1e-8,reltol=1e-8)
+                # F[ii] -= sol(dt)*dt - sqrt(2*dt/a)*rand(gaussianD)
                 # Own solver
-                # F[ii] -= ActionDer(a,m,mu,la,F[ii],F[(ii-2+n_tau)%n_tau+1],F[(ii)%n_tau+1])*dt - sqrt(2*dt/a)*rand(gaussianD)
+                F[ii] -= ActionDer(a,m,mu,la,F[ii],F[(ii-2+n_tau)%n_tau+1],F[(ii)%n_tau+1])*dt - sqrt(2*dt/a)*rand(gaussianD)
             end
         end
         if i%2000==0
@@ -319,7 +235,7 @@ begin
     n_tau=16
     β=8
     a=β/n_tau
-    Langv1=Langevin(10000,a,1,1,0,gaussianD,"L_dt0.01_Euler_b8.csv")
+    Langv1=Langevin(10000,a,1,1,0,gaussianD,"$(save_date)_L_dt0.001_b8.csv")
 end
 
 # Langevin expectationvalues

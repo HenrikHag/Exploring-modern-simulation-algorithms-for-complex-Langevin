@@ -2,7 +2,7 @@ using FFTW, Plots, Statistics, StatsBase
 
 export Err1, Jackknife1
 export LastRowFromFile, GetColumn, GetData, GetTwoPointData, GetTP1data, GetExpXData, GetLastMean
-export AutoCorrR, TPCF, EffM, Exp_x2e
+export AutoCorrR, TPCF, EffM, Exp_x2e, Exp_x2
 export PlotAC, PlotACsb, PlotTPCF, PlotEffM, PlotProbDD, PlotProbDDe, PlotACwt, PlotACsbwt, PlotTPCFwt
 # using PlotExp, plot_x
 
@@ -340,13 +340,19 @@ Calculates the analytical expectation value ⟨x²⟩ for the Harmonic Oscillato
 with mass m, frequency ω, lattice spacing a, and lattice points n_tau.
 """
 function Exp_x2e(n_tau, a, m, ω)
-    R = 1 + a^2*ω^2/2 - a*ω*sqrt(1+ω^2*a^2/4)
-    return (1 + R^n_tau)/(1 - R^n_tau)/(2*m*ω)
+    R = 1 + a^2*ω^2/2 - a*ω*sqrt(1+a^2*ω^2/4)
+    return (1 + R^n_tau)/(1 - R^n_tau)/(2*m*ω)#*sqrt(1+(a*ω)^2/4))
 end
-# function Exp_x2(n_tau, a, m, ω)
-#     R = 1 + (a*ω)^2/2 - a*ω*sqrt(1+(a*ω)^2/4)
-#     return 1/(2*a^2*m*ω*sqrt(1+(a*ω/2)^2))*(1+R^n_tau)/(1-R^n_tau)
-# end
+
+"""
+Calculates the analytical expectation value ⟨x²⟩ for the Harmonic Oscillator  
+taking into consideration the discretization effects.  
+with mass m, frequency ω, lattice spacing a, and lattice points n_tau.
+"""
+function Exp_x2(n_tau, a, m, ω)
+    R = 1 + (a*ω)^2/2 - a*ω*sqrt(1+(a*ω)^2/4)
+    return (1+R^n_tau)/(1-R^n_tau)/(2*m*ω*sqrt(1+(a*ω)^2/4))
+end
 
 
 

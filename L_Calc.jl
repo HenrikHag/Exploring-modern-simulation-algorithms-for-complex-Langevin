@@ -1,17 +1,21 @@
 begin
-    using .UsersGuide
-    using .MetropolisUpdate
+    using MCMC
+    # using .UsersGuide
+    # using .MetropolisUpdate
     using Plots
     using BenchmarkTools
     using StatsBase
     using DataFrames
-    using GLM
+    save_date = findDate()
+    # using GLM
 end
 # 
 measf = "results/CL_1.csv"#"results/measuredObsB100S0_7.csv"
 measf = "results/CL_4.csv"
 measf = "results/L_dt0.01_Euler_b8.csv"
 measf = "results/L_dt0.1_b8.csv"
+measf = "results/22.05.21_L_dt0.001_b8.csv"
+
 
 
 
@@ -38,6 +42,7 @@ begin   # ⟨x₁²⟩
     plt = plot!(a1,width=4)
     display(plt)                                   # Save as png manually
     # savefig(plt,"plots/22.05.03_L_expect_x2.pdf")   # Save as pdf in folder "plots"
+    Jackknife1(a)
 end
 Exp_x2e(16,0.5,1,1)
 
@@ -48,5 +53,6 @@ begin   # ⟨xᵢ⟩, ⟨xᵢ²⟩
     plot!(a2[:,1],yerr=a2[:,2])
     plt = hline!([Exp_x2e(16,0.5,1,1),0])
     display(plt)                                   # Save as png manually
-    # savefig(plt,"plots/22.05.03_L_expect_x_i.pdf")   # Save as pdf in folder "plots"
+    savefig(plt,"plots/$(save_date)_L_dt0.001_b8_x12.pdf")   # Save as pdf in folder "plots"
+    savefig(plt,"plots/$(save_date)_L_dt0.001_b8_x12.png")   # Save as png in folder "plots"
 end

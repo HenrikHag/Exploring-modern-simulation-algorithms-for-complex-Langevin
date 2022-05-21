@@ -1,11 +1,12 @@
 begin
-    using .UsersGuide
-    using .MetropolisUpdate
+    using MCMC
+    # using .UsersGuide
+    # using .MetropolisUpdate
     using Plots
     using BenchmarkTools
     using StatsBase
     using DataFrames
-    using GLM
+    # using GLM
 end
 # 
 measf = "results/measuredObsHO_1_β8_16.csv"#"results/measuredObsB100S0_7.csv"

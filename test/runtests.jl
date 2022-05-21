@@ -39,3 +39,5 @@ println("λ=24: ",difActionAHO(n_tau,a,m,ω,24.,Path,i,x_new))
     # AHO action same as HO action limit
     @test difActionAHO(n_tau,a,m,ω,λ,Path,i,x_new) ≈ difActionHO(n_tau,a,m,ω,Path,i,x_new)
 end
+
+# testset "Gaussian distribution Ω"
