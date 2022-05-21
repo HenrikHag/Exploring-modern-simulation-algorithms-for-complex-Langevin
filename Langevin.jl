@@ -452,13 +452,25 @@ function CLangevin(N,a,m,mu,la,gaussianD,filename)
                 # F_i[ii] -= derAction[2]*dt
             end 
         end
-        if i%2000==0
+        if i%2000==-1
             println(i)
         end
     end
     println("t: ",t1.time, " t2:", t1.gctime)
     return Flist_r, Flist_i#WeightP_r, WeightP_i, WeightN_r, WeightN_i, 
 end
+
+ComplexSys = CLangevin(20000,0.5,1,1,0.4,gaussianD,"CL_2")
+incsize1= 0.1
+for i = 0:0.1:π
+    ComplexSys = CLangevin(20000,0.5,1,exp(i*im),0,gaussianD,"CL_2")
+    display(scatter(ComplexSys[1],ComplexSys[2]))
+    arr1 = float.(ComplexSys[1])
+    println("i: ",i," e^z: ",exp(i*im))
+    println("⟨xᵣ²⟩: ",mean(ComplexSys[1].^2)," ⟨xᵢₘ²⟩: ",mean(ComplexSys[2].^2))
+    display(histogram(arr1,bins=[i for i=floor(minimum(arr1)*10)/10:incsize1:(floor(maximum(arr1)*10)+1)/10],normed=true,xlabel="x",ylabel="|ψ_0|²"))
+end
+
 
 # μ = e^iϕ, ϕ = (0,2π) (+n*2π)
 ComplexSys = CLangevin(20000,0.5,1,0.05*im+1,0,gaussianD,"CL_2")
@@ -494,6 +506,8 @@ end
 # Diverges to NaN coordinates late in τ time when Re(z) → 0, Im(z) → 1
 # Scatterplot showes values collected moves from only real part to uniform real/complex parts
 # Find out for which values eᶻ should diverge
+
+# At i=0.8 to i=0.9 ⟨x²⟩ gets 10% error. At i=1.5 (π/2), ⟨x²⟩=7.3
 
 
 # scatter(ComplexSys[3],ComplexSys[4],yrange=[-0.004,0.003],xlabel="Re[ρ]",ylabel="Im[ρ]")
@@ -601,7 +615,12 @@ a = [0.990894    0.00115783;
 ## Complex Langevin solver package ###
 ######################################
 
-
+"""
+`ϕ = ∑ᵢ m/2 a[((ϕᵢ₊₁-ϕᵢ)/a)² + μϕᵢ²]`  
+`ϕⱼ = m/2 a[((ϕⱼ₊₁-ϕⱼ)/a)² + ((ϕⱼ-ϕⱼ₋₁)/a)² + μϕⱼ²]`  
+`∂ϕ/∂ϕⱼ = ∂/∂ϕⱼ m a [(ϕⱼ²-(ϕⱼ)(ϕⱼ₊₁+ϕⱼ₋₁))/a² + μ/2 ϕⱼ²]`  
+`       = m a [(2ϕⱼ - ϕⱼ₊₁ - ϕⱼ₋₁)/a² + μϕⱼ]`
+"""
 function ActionDerSchem(du, u, params, t)
     p = params.p
     xR = @view u[1:div(end,2)]
@@ -610,6 +629,7 @@ function ActionDerSchem(du, u, params, t)
     Fr_diff_p1 = xR[vcat(2:end,1)] .- xR       # dx_{j+1} - dx_j
     Fi_diff_m1 = xI .- xI[vcat(end,1:end-1)]   # dx_j - dx_{j-1}
     Fi_diff_p1 = xI[vcat(2:end,1)] .- xI       # dx_{j+1} - dx_j
+    # dx_j - dx_{j-1} - (dx_{j+1} - dx_j) = 2dx_j - dx_{j+1} - dx_{j-1}
     du[1:div(end,2)] .= p.m .* real.(Fr_diff_p1 .- Fr_diff_m1 .+ im .* (Fi_diff_p1 .- Fi_diff_m1)) ./ p.a^2 .- real.(p.mu .* xR .+ im .* (p.mu .* xI))
     du[div(end,2)+1:end] .= p.m .* imag.(im .* (Fi_diff_p1 .- Fi_diff_m1) .+ (Fr_diff_p1 .- Fr_diff_m1)) ./ p.a^2 .- imag.(p.mu .* xR .+ im .* (p.mu .* xI))
 end
