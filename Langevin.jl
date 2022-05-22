@@ -119,7 +119,7 @@ end
 `       = m a [(ϕⱼ - ϕⱼ₊₁ - ϕⱼ₋₁)/a² + μϕⱼ]`
 [∂ϕ/∂ϕ₁,∂ϕ/∂ϕ₂]
 """
-function ActionDerSchem(du, u, params, t)
+function ActionLDerSchem(du, u, params, t)
     p = params.p
     xR = @view u[:]
     F_diff_m1 = xR .- xR[vcat(end,1:end-1)]   # dx_j - dx_{j-1}
@@ -127,7 +127,7 @@ function ActionDerSchem(du, u, params, t)
 
     du .= p.m .* (F_diff_p1 .- F_diff_m1) ./ p.a^2 .- (p.mu .* xR)
 end
-# ActionDerSchem([1,2,1,1,2,1],params)
+# ActionLDerSchem([1,2,1,1,2,1],params)
 
 function RandScale(du, u, param, t)
     a = param.p.a
@@ -144,7 +144,7 @@ function LangevinSchem(N,a,m,mu,la,gaussianD)
     # params = Lvector(p=struct w fields m μ λ)
     params = LVector(p=AHO_Param(a,m,mu,la))
     # Function to calculate change in action for whole path
-    sdeprob1 = SDEProblem(ActionDerSchem,RandScale,F0,timespan,params)
+    sdeprob1 = SDEProblem(ActionLDerSchem,RandScale,F0,timespan,params)
 
     @time sol = solve(sdeprob1, Euler(), progress=true, saveat=0.1/dt, savestart=false,
                 dtmax=1e-3, dt=dt, abstol=5e-2,reltol=5e-2)
@@ -531,13 +531,14 @@ a = [0.990894    0.00115783;
 ## Complex Langevin solver package ###
 ######################################
 
+# Write exactly what the function does
 """
 `ϕ = ∑ᵢ m/2 a[((ϕᵢ₊₁-ϕᵢ)/a)² + μϕᵢ²]`  
 `ϕⱼ = m/2 a[((ϕⱼ₊₁-ϕⱼ)/a)² + ((ϕⱼ-ϕⱼ₋₁)/a)² + μϕⱼ²]`  
 `∂ϕ/∂ϕⱼ = ∂/∂ϕⱼ m a [(ϕⱼ²-(ϕⱼ)(ϕⱼ₊₁+ϕⱼ₋₁))/a² + μ/2 ϕⱼ²]`  
 `       = m a [(2ϕⱼ - ϕⱼ₊₁ - ϕⱼ₋₁)/a² + μϕⱼ]`
 """
-function ActionDerSchem(du, u, params, t)
+function ActionCLDerSchem(du, u, params, t)
     p = params.p
     xR = @view u[1:div(end,2)]
     xI = @view u[div(end,2)+1:end]
@@ -549,7 +550,7 @@ function ActionDerSchem(du, u, params, t)
     du[1:div(end,2)] .= p.m .* real.(Fr_diff_p1 .- Fr_diff_m1 .+ im .* (Fi_diff_p1 .- Fi_diff_m1)) ./ p.a^2 .- real.(p.mu .* xR .+ im .* (p.mu .* xI))
     du[div(end,2)+1:end] .= p.m .* imag.(im .* (Fi_diff_p1 .- Fi_diff_m1) .+ (Fr_diff_p1 .- Fr_diff_m1)) ./ p.a^2 .- imag.(p.mu .* xR .+ im .* (p.mu .* xI))
 end
-# ActionDerSchem([1,2,1,1,2,1],params)
+# ActionCLDerSchem([1,2,1,1,2,1],params)
 
 function RandScale(du, u, param, t)
     a = param.p.a
@@ -566,7 +567,7 @@ function LangevinSchem(N,a,m,mu,la,gaussianD)
     # params = Lvector(p=struct w fields m μ λ)
     params = LVector(p=AHO_CL_Param(a,m,mu,la))
     # Function to calculate change in action for whole path
-    sdeprob1 = SDEProblem(ActionDerSchem,RandScale,F0,timespan,params)
+    sdeprob1 = SDEProblem(ActionCLDerSchem,RandScale,F0,timespan,params)
 
     @time sol = solve(sdeprob1, Euler(), progress=true, saveat=0.01/dt, save_start=false,
                 dtmax=1e-3, dt=dt, abstol=5e-2,reltol=5e-2)
@@ -630,6 +631,11 @@ function RandScaleGaussMod(du, u, param, t)
     du[1:div(end,2)] .= sqrt.(2.)
 end
 
+"""
+Want to show the method can compute the integral  
+`∫dx x^2 e^{-μ/2 x^2} / ∫dx e^{-μ/2 x^2}` where `μ ∈ C`  
+`= 1/μ`
+"""
 function GaussianModel(du, u, params, t)
     p = params.p
     xR = @view u[1:div(end,2)]
