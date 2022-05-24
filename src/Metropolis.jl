@@ -3,7 +3,8 @@ using FFTW, Plots, Printf, Random, Statistics
 
 export FFTW, Plots, Printf, Random, Statistics
 # export n_tau, idrate, h, m, ω, accept, sum1, sum2, sum3
-export HO_Action, AHO_Action, difActionHO, difActionAHO, MeasureObs, E_Vals#, MeasureObs
+export HO_fullAction, HO_Action, AHO_Action, difActionHO, difActionAHO
+export MeasureObs, E_Vals#, MeasureObs
 export printarray, printmatrix
 export writee123tofile, writec123tofile, writec3s3tofile, writes3e3tofile, writeeMean
 
@@ -44,6 +45,14 @@ export writee123tofile, writec123tofile, writec3s3tofile, writes3e3tofile, write
 #                       #
 # Defining the action   #
 #                       #
+"""
+Computes the full Harmonic Oscillator action of array1
+"""
+function HO_fullAction(array1::AbstractArray,a,m,ω)
+    return 0.5*m*sum([(array1[(i%length(array1))+1]+array1[i])^2/a + a*ω^2*array1[i]^2 for i=1:length(array1)])
+end
+
+
 """Harmonic Oscillator change of Action  
 Returns the part of the action dependent on coord at index i of Path  
 Path:       The global Path  

@@ -22,6 +22,7 @@ begin
     # n_tau, m, ω
     rng = MersenneTwister(11111)
     gaussianD = Normal(0.16, 1.5)
+    save_date = findDate()
     # n=rand(d,1000)
 end
 
@@ -66,7 +67,7 @@ end
 #                               #
 """Does a metroswipe by testing a change for each element,  
 and adds this new coord weighted by change in action."""
-function MetroSwipe(n_tau, m, ω, λ, a, h, idrate, rng, Path)
+function MetroSwipe(n_tau::Int64, m, ω, λ, a, h, idrate, rng, Path)
     accept = 0
     for i = 1:n_tau
         x_new = Path[i] + h*2*(rand(rng)-1/2)
@@ -117,12 +118,12 @@ function main(n_tau::Int,meanfname,obsfname,expfname,m,ω,a,λ)
     # We want to print final expectation values
     # rng = MersenneTwister(11111)
     println("\nn_tau = ",n_tau,", m,ω = ", m,", ",ω)
-    Path = zeros(n_tau)
+    Path = [500. for i=1:16]
     exp_x, exp_x2, exp_x0x1 = zeros(n_tau), zeros(n_tau), zeros(n_tau)
     sum1, sum2, sum3 = zeros(n_tau), zeros(n_tau), zeros(n_tau)
-    n_burn = 2500
-    n_skip = 0#42#50#n_tau/10#12
-    n_total = n_burn + 1 + (1+n_skip)*15000#20000#200100
+    n_burn = 0
+    n_skip = 20000#42#50#n_tau/10#12
+    n_total = Int64(n_burn + 1 + (1+n_skip)*15000)#20000#200100
     accept = 0
     idrate = 0.8
     h = 1
@@ -187,6 +188,8 @@ end
 
 n_tau=16;m=1;β=8;a=β/n_tau;λ=0;
 # n_skip=0; n_burn=2500; n_total=n_burn + 1 + (1+n_skip)*15000;
+main(n_tau,"$(save_date)_M_β$(β)_$(n_tau)_fullAC_expfull.csv","$(save_date)_M_β$(β)_$(n_tau)_fullAC_measuredObs.csv","$(save_date)_M_β$(β)_$(n_tau)_fullAC_expect.csv",m,m,a,λ)
+
 main(n_tau,"22.05.12_M_β$(β)_$(n_tau)_fullAC_expfull.csv","22.05.12_M_β$(β)_$(n_tau)_fullAC_measuredObs.csv","22.05.12_M_β$(β)_$(n_tau)_fullAC_expect.csv",m,m,a,λ)
 
 analysisFile = "results/22.05.12_M_β8_16_fullAC_measuredObs.csv"

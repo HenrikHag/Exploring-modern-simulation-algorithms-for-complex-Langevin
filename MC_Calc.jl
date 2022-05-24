@@ -10,6 +10,7 @@ begin
 end
 # 
 measf = "results/measuredObsHO_1_β8_16.csv"#"results/measuredObsB100S0_7.csv"
+measf = "results/22.05.24_M_β8_16_fullAC_measuredObs.csv"
 expf = "results/expfullHO_10_1.csv"
 
 #                                               #
@@ -198,7 +199,19 @@ plot(jkxdat[:,1],yerr=jkxdat[:,2])
 
 
 
-
+#   Action   #
+begin   # Action(xᵢ)
+    a1=[]
+    a = GetData(measf,4,1)
+    for i = 1:100#length(a[:,1])
+        append!(a1,HO_fullAction(a[i,:],0.5,1,1))
+    end
+    # scatter(a)
+    plt = scatter(a1,legend=false)
+    display(plt)                                   # Save as png manually
+    savefig(plt,"plots/$(save_date)_M_badIC_action.pdf")   # Save as pdf in folder "plots"
+    savefig(plt,"plots/$(save_date)_M_badIC_action.png")   # Save as pdf in folder "plots"
+end
 
 
 
@@ -216,7 +229,8 @@ begin   # ⟨x₁⟩
     scatter(a)
     plt = plot!(a1,width=4)
     display(plt)                                   # Save as png manually
-    # savefig(plt,"plots/22.05.03_M_expect_x1.pdf")   # Save as pdf in folder "plots"
+    savefig(plt,"plots/$(save_date)_M_badIC_expect_x1.pdf")   # Save as pdf in folder "plots"
+    savefig(plt,"plots/$(save_date)_M_badIC_expect_x1.png")   # Save as pdf in folder "plots"
 end
 
 begin   # ⟨x₁²⟩
@@ -228,7 +242,7 @@ begin   # ⟨x₁²⟩
     scatter(a)
     plt = plot!(a1,width=4)
     display(plt)                                   # Save as png manually
-    # savefig(plt,"plots/22.05.03_M_expect_x2.pdf")   # Save as pdf in folder "plots"
+    savefig(plt,"plots/$(save_date)_M_expect_x2.pdf")   # Save as pdf in folder "plots"
 end
 Exp_x2(16,0.95,1,1)
 
