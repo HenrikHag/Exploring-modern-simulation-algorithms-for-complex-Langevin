@@ -6,6 +6,8 @@ begin
     using BenchmarkTools
     using StatsBase
     using DataFrames
+    save_date = findDate()
+    save_folder = "plots/"
     # using GLM
 end
 # 
@@ -29,31 +31,14 @@ mean(GetData(measf,4,1)[:,1].^2)
 
 
 PlotAC(measf)
+TPCF(measf)[end,:]
+TPCF(measf,true)[end,:]
 
-"""Computes the integrated autocorrelationtime from "filename"  
-"""
-function ACI(filename)
-    dat1 = GetData(filename,4,1)
-    autocorrdata = AutoCorrR(dat1)
-    auto1 = Err1(autocorrdata)[:,1]
-    index1 = length(auto1)
-    for i=1:length(auto1)
-        if auto1[i] < 0
-            index1 = i
-            println("First negative value of autocorr at index: ",i)
-            break
-        end
-    end
-    auto1 = auto1[1:index1]
-    acInt = sum(auto1)-auto1[1]
-    # acInt *= (length(auto1)-1)/length(auto1)
-    acInt += 0.5
-    # acInt *= var(dat1)/length(auto1)
-    return acInt#, length(dat1[:,1])
-end
 
 PlotAC("results/measuredObsB1.csv",100)
-ACI("results/measuredObsB1.csv")
+dat1 = GetData("results/measuredObsB1.csv",4,1)
+TPCF(dat1[1,:])
+ACIntegrated(dat1)
 
 ######
 for i in ["results/measuredObsHO_1_β1_16.csv","results/measuredObsHO_1_β4_16.csv","results/measuredObsHO_1_β8_16.csv","results/measuredObsHO_1_β16_16.csv"]
@@ -201,6 +186,7 @@ plot(jkxdat[:,1],yerr=jkxdat[:,2])
 
 #   Action   #
 begin   # Action(xᵢ)
+    save_name = "$(save_folder)$(save_date)_M_badIC_action"
     a1=[]
     a = GetData(measf,4,1)
     for i = 1:100#length(a[:,1])
@@ -209,8 +195,8 @@ begin   # Action(xᵢ)
     # scatter(a)
     plt = scatter(a1,legend=false)
     display(plt)                                   # Save as png manually
-    savefig(plt,"plots/$(save_date)_M_badIC_action.pdf")   # Save as pdf in folder "plots"
-    savefig(plt,"plots/$(save_date)_M_badIC_action.png")   # Save as pdf in folder "plots"
+    savefig(plt,"$(save_name).pdf")   # Save as pdf in folder "plots"
+    savefig(plt,"$(save_name).png")   # Save as png in folder "plots"
 end
 
 
@@ -221,6 +207,7 @@ end
 # plot(expxDatawErr[:,1],yerr=expxDatawErr[:,2])
 
 begin   # ⟨x₁⟩
+    save_name = "$(save_folder)$(save_date)_M_badIC_expect_x_1"
     a1=[]
     a = GetData(measf,4,1)[1:400,1]
     for i = 1:length(a)
@@ -228,12 +215,13 @@ begin   # ⟨x₁⟩
     end
     scatter(a)
     plt = plot!(a1,width=4)
-    display(plt)                                   # Save as png manually
-    savefig(plt,"plots/$(save_date)_M_badIC_expect_x1.pdf")   # Save as pdf in folder "plots"
-    savefig(plt,"plots/$(save_date)_M_badIC_expect_x1.png")   # Save as pdf in folder "plots"
+    display(plt)
+    savefig(plt,"$(save_name).pdf")   # Save as pdf in folder "plots"
+    savefig(plt,"$(save_name).png")   # Save as png in folder "plots"
 end
 
 begin   # ⟨x₁²⟩
+    save_name = "$(save_folder)$(save_date)_M_expect_x2_1"
     a1=[]
     a = GetData(measf,4,1)[1:4000,1].^2
     for i = 1:length(a)
@@ -241,17 +229,20 @@ begin   # ⟨x₁²⟩
     end
     scatter(a)
     plt = plot!(a1,width=4)
-    display(plt)                                   # Save as png manually
-    savefig(plt,"plots/$(save_date)_M_expect_x2.pdf")   # Save as pdf in folder "plots"
+    display(plt)
+    savefig(plt,"$(save_name).pdf")   # Save as pdf in folder "plots"
+    savefig(plt,"$(save_name).png")   # Save as png in folder "plots"
 end
 Exp_x2(16,0.95,1,1)
 
 begin   # ⟨xᵢ⟩, ⟨xᵢ²⟩
+    save_name = "$(save_folder)$(save_date)_M_expect_x_x2"
     a1 = Jackknife1(GetData(measf,4,1))
     plot(a1[:,1],yerr=a1[:,2],legend=false)
     a2 = Jackknife1(GetData(measf,4,1).^2)
     plot!(a2[:,1],yerr=a2[:,2])
     plt = hline!([Exp_x2e(16,0.5,1,1),0])
-    display(plt)                                   # Save as png manually
-    # savefig(plt,"plots/22.05.03_M_expect_x_i.pdf")   # Save as pdf in folder "plots"
+    display(plt)
+    # savefig(plt,"$(save_name).pdf")   # Save as pdf in folder "plots"
+    # savefig(plt,"$(save_name).png")   # Save as png in folder "plots"
 end

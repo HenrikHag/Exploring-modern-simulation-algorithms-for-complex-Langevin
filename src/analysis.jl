@@ -2,7 +2,7 @@ using FFTW, Plots, Statistics, StatsBase
 
 export Err1, Jackknife1
 export LastRowFromFile, GetColumn, GetData, GetTwoPointData, GetTP1data, GetExpXData, GetLastMean
-export AutoCorrR, TPCF, EffM, Exp_x2e, Exp_x2
+export AutoCorrR, ACIntegrated, TPCF, EffM, Exp_x2e, Exp_x2
 export PlotAC, PlotACsb, PlotTPCF, PlotEffM, PlotProbDD, PlotProbDDe, PlotACwt, PlotACsbwt, PlotTPCFwt
 # using PlotExp, plot_x
 
@@ -36,10 +36,12 @@ end
 
 
 """
-Does Jackknife analysis with `binsize = n-1`, where `n = length(array1)`  
-If type is matrix it returnes a matrix of results of Jacknife analysis for each column
+Does Jackknife analysis with `Jackknife binsize = n-1`, where `n = length(array1)`  
+If type is matrix it returnes a matrix of results of Jacknife analysis for each column  
+If binsize is specified, does Jackknife analysis with `Jackknife binsize = n-binsize`  
+If defIntACtimeBin is specified, uses Integrated AC time as `binsize`
 """
-function Jackknife1(array1::AbstractArray)
+function Jackknife1(array1::AbstractVector)
     leng1 = length(array1)
     sum1 = sum(array1)
     jf = Vector{Float64}(undef,leng1)
@@ -54,7 +56,7 @@ function Jackknife1(array1::AbstractArray)
     jfvm *= (length(array1)-1)
     return [mean(array1),√(jfvm)]
 end
-function Jackknife1(array1::AbstractArray,binsize::Int)
+function Jackknife1(array1::AbstractVector,binsize::Integer)
     leng1 = length(array1)
     sum1 = sum(array1)
     N = Int(floor(Int,leng1/binsize)+1)
@@ -72,16 +74,39 @@ function Jackknife1(array1::AbstractArray,binsize::Int)
     jfvm *= (length(array1)-1)
     return [mean(array1),√(jfvm)]
 end
+function Jackknife1(array1::AbstractVector,defIntACtimeBin::Bool)
+    if defIntACtimeBin
+        return Jackknife1(array1,ceil(Int64,ACIntegrated(array1)))
+    end
+    return Jackknife1(array1)
+end
 function Jackknife1(matrix1::AbstractMatrix)
     jf = Matrix{Float64}(undef,length(matrix1[1,:]),2)
     for i=1:length(matrix1[1,:])
-        a = Jackknife1(matrix1[:,i])
-        jf[i,:] = a
+        jf[i,:] = Jackknife1(matrix1[:,i])
     end
     return jf
 end
-
-
+function Jackknife1(matrix1::AbstractMatrix,binsize::Integer)
+    jf = Matrix{Float64}(undef,length(matrix1[1,:]),2)
+    for i=1:length(matrix1[1,:])
+        jf[i,:] = Jackknife1(matrix1[:,i],binsize)
+    end
+    return jf
+end
+function Jackknife1(matrix1::AbstractMatrix,defIntACtimeBin::Bool)
+    jf = Matrix{Float64}(undef,length(matrix1[1,:]),2)
+    if defIntACtimeBin
+        for i=1:length(matrix1[1,:])
+            jf[i,:] = Jackknife1(matrix1[:,i],defIntACtimeBin)
+        end
+    else
+        for i=1:length(matrix1[1,:])
+            jf[i,:] = Jackknife1(matrix1[:,i])
+        end
+    end
+    return jf
+end
 
 
 
@@ -207,6 +232,7 @@ end
 """
 returns AutoCorrelation of arrayC.  
 returns a matrix of correlations → if matrix of configs ↓ is passed.  
+`[t_MC,xᵢ] → [xᵢ,AC(t_MC)]`
 """
 function AutoCorrR(arrayC)
     mean1 = mean(arrayC)
@@ -215,7 +241,7 @@ function AutoCorrR(arrayC)
     arrayCm = (abs.(autoCorr)).^2
     autoCorr = ifft(arrayCm)
     e1 = autoCorr[1]
-    return (autoCorr)./e1
+    return real.((autoCorr)./e1)
 end
 function AutoCorrR(arrayC,norm::Bool)
     mean1 = mean(arrayC)
@@ -227,7 +253,7 @@ function AutoCorrR(arrayC,norm::Bool)
     if !norm
         return autoCorr
     end
-    return (autoCorr)./e1
+    return real.((autoCorr)./e1)
 end
 function AutoCorrR(matrixC::AbstractMatrix)
     CorrD=Matrix{Float64}(undef,length(matrixC[1,:]),length(matrixC[:,1]))
@@ -257,6 +283,40 @@ function AutoCorrR(matrixC::AbstractMatrix,norm::Bool,padded::Bool)
     return CorrD
 end
 
+"""
+Computes the integrated autocorrelation time from array  
+If input is matrix, returns IAC time of `⟨AC(t_MC)⟩ₓ`
+"""
+function ACIntegrated(array1::AbstractVector)
+    autocorrdata = AutoCorrR(array1)
+    index1 = length(autocorrdata)
+    for i = 1:length(autocorrdata)
+        if autocorrdata[i] < 0
+            index1 = i
+            # println("First negative value of autocorr at index: ",i)
+            break
+        end
+    end
+    acInt = sum(autocorrdata[2:index1]) + 0.5
+    # acInt *= (length(auto1)-1)/length(auto1)
+    return acInt
+end
+function ACIntegrated(matrix1::AbstractMatrix)
+    autocorrdata = AutoCorrR(matrix1)
+    auto1 = Err1(autocorrdata)[:,1] # Average over x of ACₓ(t_MC)
+    index1 = length(auto1)
+    for i = 1:length(auto1)
+        if auto1[i] < 0
+            index1 = i
+            # println("First negative value of autocorr at index: ",i)
+            break
+        end
+    end
+    acInt = sum(auto1[2:index1]) + 0.5
+    # acInt *= (length(auto1)-1)/length(auto1)
+    return acInt
+end
+
 
 #                                       #
 #         Two-Point Correlation         #
@@ -280,20 +340,29 @@ function TPCF(filename::String,Jackknife::Bool)
     end
     return tpcr
 end
-function TPCF(Array1::AbstractArray)
-    return Array1
-end
-function TPCF(Matrix1::AbstractMatrix)
-    tpcr = Err1(GetTwoPointData(filename))
-    return tpcr
-end
-function TPCF(Matrix1::AbstractMatrix,Jackknife::Bool)
-    if Jackknife
-        tpcr = Jackknife1(GetTwoPointData(filename))
-    else
-        tpcr = Err1(GetTwoPointData(filename))
+function TPCF(array1::AbstractVector)
+    twopointcorr1 = Vector{Float64}(undef,length(array1))
+    for i = 0:length(array1)-1
+        twopointcorr1[i+1] = sum(array1 .* circshift(array1,-i))
     end
-    return tpcr
+    return twopointcorr1
+end
+function TPCF(matrix1::AbstractMatrix)
+    tpcr = Matrix{Float64}(undef,length(matrix1[1,:]),length(matrix1[:,1]))
+    for i = 1:length(matrix1[1,:])
+        tpcr[i,:] = TPCF(matrix1[:,i])
+    end
+    return Err1(tpcr)
+end
+function TPCF(matrix1::AbstractMatrix,Jackknife::Bool)
+    if Jackknife
+        tpcr = Matrix{Float64}(undef,length(matrix1[1,:]),length(matrix1[:,1]))
+        for i = 1:length(matrix1[1,:])
+            tpcr[i,:] = TPCF(matrix1[:,i])
+        end
+        return Jackknife1(tpcr,true)
+    end
+    return TPCF(matrix1)
 end
 
 
@@ -305,20 +374,20 @@ end
 Calculates the effective mass from a two-point correlation function
 """
 function EffM(array1::AbstractVector)
-    effm = Array{Float64}(undef,0)
-    for i=2:length(array1)-1
-        append!(effm,1/2*log10(array1[i-1]/array1[i+1]))
+    effm = Vector{Float64}(undef,length(array1)-2)
+    for i=1:length(array1)-2
+        effm[i] = 0.5*log10(array1[i]/array1[i+2])
     end
     # display(plot(effm))
     return effm
 end
 function EffM(array1::AbstractMatrix)
     effm = Matrix{Float64}(undef,length(array1[:,1])-2,2)
-    for i=2:length(array1[:,1])-1
-        efm = 1/2*log10(array1[i-1,1]/array1[i+1,1])
-        effm[i-1,1] = efm
-        effm[i-1,2] = max(
-            1/2*log10((abs(array1[i-1,1])+array1[i-1,2])/(abs(array1[i+1,1])-array1[i+1,2]))-efm,
+    for i=1:length(array1[:,1])-2
+        efm = 1/2*log10(array1[i,1]/array1[i+2,1])
+        effm[i,1] = efm
+        effm[i,2] = max(
+            1/2*log10((abs(array1[i,1])+array1[i,2])/(abs(array1[i+2,1])-array1[i+2,2]))-efm,
             efm-1/2*log10((abs(array1[i-1,1])-array1[i-1,2])/(abs(array1[i+1,1])+array1[i+1,2]))
             )
         # println(1/2*log10((abs(array1[i-1,1])+array1[i-1,2])/(abs(array1[3,2])-array1[3,2]))-1/2*log10(array1[1,1]/array1[3,1]))

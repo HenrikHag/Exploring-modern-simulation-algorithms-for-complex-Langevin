@@ -1,3 +1,6 @@
+# Plot results of Langevin simulation
+
+# julia> ] activate .
 begin
     using MCMC
     # using .UsersGuide
@@ -7,9 +10,11 @@ begin
     using StatsBase
     using DataFrames
     save_date = findDate()
+    save_folder = "plots/"
     # using GLM
 end
-# 
+
+# Filename of datafile to be analysed
 measf = "results/CL_1.csv"#"results/measuredObsB100S0_7.csv"
 measf = "results/CL_4.csv"
 measf = "results/L_dt0.01_Euler_b8.csv"
@@ -21,6 +26,8 @@ measf = "results/22.05.21_L_dt0.001_b8.csv"
 
 
 begin   # ⟨x₁⟩
+    # Plot of x₁ with running mean
+    save_name = "$(save_folder)$(save_date)_L_expect_x_1"
     a1=[]
     a = GetData(measf,4,1)[1:400,1]
     for i = 1:length(a)
@@ -28,31 +35,40 @@ begin   # ⟨x₁⟩
     end
     scatter(a)
     plt = plot!(a1,width=4)
-    display(plt)                                   # Save as png manually
-    # savefig(plt,"plots/22.05.03_L_expect_x1.pdf")   # Save as pdf in folder "plots"
+    display(plt)
+    # savefig(plt,"$(save_name).pdf")   # Save as pdf in folder "plots"
+    # savefig(plt,"$(save_name).png")   # Save as png in folder "plots"
 end
 
 begin   # ⟨x₁²⟩
+    # Plot of x₁² with running mean
+    save_name = "$(save_folder)$(save_date)_L_expect_x2_1"
     a1=[]
     a = GetData(measf,4,1)[1:400,1].^2
     for i = 1:length(a)
         append!(a1,mean(a[1:i]))
     end
-    scatter(a)
-    plt = plot!(a1,width=4)
-    display(plt)                                   # Save as png manually
-    # savefig(plt,"plots/22.05.03_L_expect_x2.pdf")   # Save as pdf in folder "plots"
-    Jackknife1(a)
+    plt = scatter(a)
+    plot!(plt,a1,width=4)
+    display(plt)
+    # savefig(plt,"$(save_name).pdf")   # Save as pdf in folder "plots"
+    # savefig(plt,"$(save_name).png")   # Save as png in folder "plots"
+    Jackknife1(a,true),Exp_x2e(16,0.5,1,1) # Estimated ⟨x₁²⟩ with error, and analytical
 end
-Exp_x2e(16,0.5,1,1)
 
 begin   # ⟨xᵢ⟩, ⟨xᵢ²⟩
-    a1 = Jackknife1(GetData(measf,4,1)[:,:])
-    plot(a1[:,1],yerr=a1[:,2],legend=false)
-    a2 = Jackknife1(GetData(measf,4,1)[:,:].^2)
-    plot!(a2[:,1],yerr=a2[:,2])
-    plt = hline!([Exp_x2e(16,0.5,1,1),0])
-    display(plt)                                   # Save as png manually
-    savefig(plt,"plots/$(save_date)_L_dt0.001_b8_x12.pdf")   # Save as pdf in folder "plots"
-    savefig(plt,"plots/$(save_date)_L_dt0.001_b8_x12.png")   # Save as png in folder "plots"
+    # Plot of xᵢ's and xᵢ²'s with expectation values
+    save_name = "$(save_folder)$(save_date)_L_dt0.001_b8_x_x2"
+    
+    a1 = Jackknife1(GetData(measf,4,1)[:,:],true)
+    a2 = Jackknife1(GetData(measf,4,1)[:,:].^2,true)
+    
+    plt = plot(a1[:,1],yerr=a1[:,2],legend=false)
+    plot!(plt,a2[:,1],yerr=a2[:,2])
+    hline!(plt,[Exp_x2e(16,0.5,1,1),0],color="black") # Analytical expectation values for system
+    hline!(plt,[Exp_x2(16,0.5,1,1)],color="green")
+
+    display(plt)
+    # savefig(plt,"$(save_name).pdf")   # Save as pdf in folder "plots"
+    # savefig(plt,"$(save_name).png")   # Save as png in folder "plots"
 end
