@@ -15,25 +15,7 @@ end
 # import Pkg; Pkg.activate("."); Pkg.instantiate()
 
 
-struct HO_Param
-    a::Float64
-    m::Float64
-    mu::Float64
-end
 
-struct AHO_Param
-    a::Float64  # Lattice spacing
-    m::Float64  # Mass
-    mu::Float64 # HO coupling
-    λ::Float64  # AHO coupling
-end
-
-struct AHO_CL_Param
-    a::Float64
-    m::Float64
-    mu::Complex
-    λ::Float64
-end
 
 
 """
