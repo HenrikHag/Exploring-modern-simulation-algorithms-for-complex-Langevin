@@ -143,7 +143,7 @@ end
 """
 Returns column(s) of file delimited by ","
 """
-function GetColumn(col::Number,filename::String)
+function GetColumn(col::Integer,filename::String)
     al = Vector{Float64}(undef,0)
     for c = col
         for r = readlines(filename)
@@ -431,37 +431,63 @@ end
 #        Plot Auto Correlation          #
 #                                       #
 """
-Plots AutoCorrelation from file  
+Plots AutoCorrelation from file, matrix or vector  
 Optional:  
 fullLength; plots only for first 200 in τ if false  
 leng; specify the number to plot in τ
 """
-function PlotAC(filename)
+function PlotAC(filename::AbstractString)
     data1 = GetData(filename,4,1)
-    autocorrdata = AutoCorrR(data1)
-    jkf1 = Jackknife1(autocorrdata)
-    plot(jkf1[:,1],yerr=jkf1[:,2],xlabel="τ",ylabel="Aₒ(τ)")
+    PlotAC(data1)
 end
-function PlotAC(filename,fullLength::Bool)
+function PlotAC(filename::AbstractString,fullLength::Bool)
     data1 = GetData(filename,4,1)
+    PlotAC(data1,fullLength)
+end
+function PlotAC(filename::AbstractString,leng)
+    data1 = GetData(filename,4,1)
+    PlotAC(data1,leng)
+end
+function PlotAC(matrix1::AbstractMatrix)
+    jkf1 = Jackknife1(AutoCorrR(matrix1))
+    plot(jkf1[:,1],yerr=jkf1[:,2],xlabel="Δt",ylabel="Aₒ(t)")
+end
+function PlotAC(matrix1::AbstractMatrix,fullLength::Bool)
     if fullLength
-        autocorrdata = AutoCorrR(data1)
+        autocorrdata = AutoCorrR(matrix1)
     else
         leng = 200
-        autocorrdata = AutoCorrR(data1)[:,1:leng]
+        autocorrdata = AutoCorrR(matrix1)[:,1:leng]
     end
     jkf1 = Jackknife1(autocorrdata)
-    plot(jkf1[:,1],yerr=jkf1[:,2],xlabel="τ",ylabel="Aₒ(τ)")
+    plot(jkf1[:,1],yerr=jkf1[:,2],xlabel="Δt",ylabel="Aₒ(t)")
 end
-function PlotAC(filename,leng)
-    data1 = GetData(filename,4,1)
-    if leng > length(data1[:,1])
-        leng = length(data1[:,1])
-        println("PlotAC: Length specified to large, using length(data1[:,1]) = N_meas")
+function PlotAC(matrix1::AbstractMatrix,leng)
+    if leng > length(matrix1[:,1])
+        leng = length(matrix1[:,1])
+        println("PlotAC: Length specified to large, using full length ($(length(matrix1[:,1])))")
     end
-    autocorrdata = AutoCorrR(data1)[:,1:leng]
-    jkf1 = Jackknife1(autocorrdata)
-    plot(jkf1[:,1],yerr=jkf1[:,2],xlabel="τ",ylabel="Aₒ(τ)")
+    jkf1 = Jackknife1(AutoCorrR(matrix1)[:,1:leng])
+    plot(jkf1[:,1],yerr=jkf1[:,2],xlabel="Δt",ylabel="Aₒ(t)")
+end
+function PlotAC(vector1::AbstractVector)
+    plot(AutoCorrR(vector1),xlabel="Δt",ylabel="Aₒ(t)")
+end
+function PlotAC(vector1::AbstractVector,fullLength::Bool)
+    if fullLength
+        autocorrdata = AutoCorrR(vector1)
+    else
+        leng = 200
+        autocorrdata = AutoCorrR(vector1)[:,1:leng]
+    end
+    plot(autocorrdata,xlabel="Δt",ylabel="Aₒ(t)")
+end
+function PlotAC(vector1::AbstractVector,leng)
+    if leng > length(vector1)
+        leng = length(vector1)
+        println("PlotAC: Length specified to large, using full length ($(length(vector1)))")
+    end
+    plot(AutoCorrR(vector1)[:,1:leng],xlabel="Δt",ylabel="Aₒ(t)")
 end
 
 """

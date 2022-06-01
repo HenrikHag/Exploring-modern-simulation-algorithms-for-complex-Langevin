@@ -4,6 +4,8 @@ using Plots
 using Random
 
 
+
+
 # Stiff vs. order Solvers diagram
 LambaEM = (0.5,0.2)
 DRI1 = (1.5,0)
@@ -24,6 +26,9 @@ begin
     savefig(fig_Solvers,"plots/$(findDate())_Solvers_orderStiff.pdf")
     savefig(fig_Solvers,"plots/$(findDate())_Solvers_orderStiff.png")
 end
+
+
+
 
 # Euclidean time path
 rng = MersenneTwister(11111)

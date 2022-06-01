@@ -8,8 +8,8 @@ begin
     using StochasticDiffEq#, DifferentialEquations
     using LabelledArrays
     save_path = "results/"
-    gaussianD = Normal(0,1)
     save_date = findDate()
+    savefig_folder="plots/"
 end
 
 # import Pkg; Pkg.activate("."); Pkg.instantiate()
@@ -18,15 +18,39 @@ end
 
 
 
-"""
-`S = a(1/2*m*(P[i+1]-P[i])²/a² + μ/2*ϕ²) + λ*ϕ⁴/(4!*a⁴)`  
-`∂S/∂ϕⱼ = m*(2*P[i]-P[i+1]-P[i-1])/a² + μϕ + λ*ϕ³/(6*a³)`  
-`μ = m*ω²`
-"""
-function ActionDer(a,m,mu,la,F,f₋₁,f₊₁)
-    # return m/a*(2*F-(f₋₁+f₊₁)) + a*mu*F# + a*la/6*F^3
-    return m*(2*F-(f₋₁+f₊₁))/a^2 + mu*F# + la*F^3/(6*a^3)
-end
+
+
+
+
+
+
+
+
+# Old Langevin simulation on AHO
+
+# Generator for gaussian distributed random numbers
+gaussianD = Normal(0,1)
+
+# Define parameters
+# β=8; n_tau=16; a=β/n_tau; m=1; μ=1; λ=0;
+phys_p = AHO_L_param_old(8.,16,1.,1.,0.)
+dt=0.001; n_burn=3/dt; n_skip=3/dt;
+sim_p = Simulation_param_old(100,n_burn,n_skip,dt)
+
+res1 = Langevin_old(phys_p,sim_p,gaussianD)
+
+PlotAC(res1)
+
+
+
+
+
+# res1 = Langevin_old(100,0.5,1,1,0,gaussianD)
+
+writec123tofile("plots/testing1.csv",[1.0001,2.,3.],5)
+# 
+
+
 # DONE: Add coupling terms 2f(i)-f(i+1)-f(i-i)
 # Understand the discretizing integral and meeting mat. from 16.03
 
@@ -59,7 +83,6 @@ function Langevin(N,a,m,mu,la,gaussianD)
     Flist[1,:] = F
     F2list[1,:] = F2
     F3list[1,:] = F3
-    # println(Flist)
     dt = 0.001
     timespan = (0.0,dt)
     randoms1 = rand(gaussianD,N*n_tau)
@@ -165,51 +188,7 @@ end
 
 
 
-function Langevin(N,a,m,mu,la,gaussianD,filename)
-    path = "results/"
-    F = [20. for i = 1:n_tau]
-    dt = 0.001
-    # timespan = (0.0,dt)
-    n_burn = 3/dt
-    n_skip = 3/dt
 
-    # Thermalize
-    for i=1:n_burn
-        for ii = 1:length(F)
-            # Other solvers
-            # ϕ₋₁ = F[(ii-2+n_tau)%n_tau+1]; ϕ₊₁ = F[(ii)%n_tau+1]; ϕ0 = F[ii]
-            # f(ϕ,t,p) = (m/a*(ϕ^2-ϕ*(ϕ₊₁+ϕ₋₁)) + 0.5*m*mu*a*ϕ^2)*dt
-            # prob = ODEProblem(f,ϕ0,timespan)
-            # sol = solve(prob,Euler(),dt=dt,abstol=1e-8,reltol=1e-8)
-            # F[ii] -= sol(dt)*dt - sqrt(2*dt/a)*rand(gaussianD)
-            # Own solver
-            F[ii] -= ActionDer(a,m,mu,la,F[ii],F[(ii-2+n_tau)%n_tau+1],F[(ii)%n_tau+1])*dt - sqrt(2*dt/a)*rand(gaussianD)
-        end
-    end
-    show(F);println()
-
-    # Simulate
-    t1 = @timed for i=1:N
-        writec123tofile(path,filename,F,i)
-        for iii = 1:n_skip+1
-            for ii = 1:length(F)
-                # Other solvers
-                # ϕ₋₁ = F[(ii-2+n_tau)%n_tau+1]; ϕ₊₁ = F[(ii)%n_tau+1]; ϕ0 = F[ii]
-                # f(ϕ,t,p) = (m/a*(ϕ^2-ϕ*(ϕ₊₁+ϕ₋₁)) + 0.5*m*mu*a*ϕ^2)*dt
-                # prob = ODEProblem(f,ϕ0,timespan)
-                # sol = solve(prob,Euler(),dt=dt,abstol=1e-8,reltol=1e-8)
-                # F[ii] -= sol(dt)*dt - sqrt(2*dt/a)*rand(gaussianD)
-                # Own solver
-                F[ii] -= ActionDer(a,m,mu,la,F[ii],F[(ii-2+n_tau)%n_tau+1],F[(ii)%n_tau+1])*dt - sqrt(2*dt/a)*rand(gaussianD)
-            end
-        end
-        if i%2000==0
-            println(i)
-        end
-    end
-    println("t: ",t1.time, " t2:", t1.gctime)
-    return
-end
 println()
 Langevin(20,0.5,1,1,0,gaussianD)
 
@@ -651,6 +630,7 @@ end
 
 fig1 = 0
 fig2 = 0
+savefig_name = "$(savefig_folder)$(save_date)_CL"
 for i = 0:11
     println("Beginning i = ",i)
     n_burn = 20
@@ -678,8 +658,8 @@ for i = 0:11
             autocorrdata = AutoCorrR(ComplexSys[:,1:div(end,2)])
             jkf1 = Jackknife1(autocorrdata)
             plt1 = plot(jkf1[:,1],yerr=jkf1[:,2],xlabel="τ",ylabel="Aₒ(τ)",legend=false)#,title="AutoCorrelation"
-            savefig(plt1,"plots/$(save_date)_CL_mu$(round(mu,digits=3))_NewS_GaussModl_AC.pdf")
-            savefig(plt1,"plots/$(save_date)_CL_mu$(round(mu,digits=3))_NewS_GaussModl_AC.png")
+            savefig(plt1,"$(savefig_name)_mu$(round(mu,digits=3))_NewS_GaussModl_AC.pdf")
+            savefig(plt1,"$(savefig_name)_mu$(round(mu,digits=3))_NewS_GaussModl_AC.png")
         end
     end
     # display(scatter(ComplexSys[1],ComplexSys[2]))
@@ -700,8 +680,8 @@ for i = 0:11
         display(fig1)
         if true
             if i == 11
-                savefig(fig1,"plots/$(save_date)_CL_NewS_Cmodel1.pdf") # This is how to save a Julia plot as pdf !!!
-                savefig(fig1,"plots/$(save_date)_CL_NewS_Cmodel1.png") # This is how to save a Julia plot as pdf !!!
+                savefig(fig1,"$(savefig_name)_NewS_Cmodel1.pdf") # This is how to save a Julia plot as pdf !!!
+                savefig(fig1,"$(savefig_name)_NewS_Cmodel1.png") # This is how to save a Julia plot as pdf !!!
             end
         end
 
@@ -709,8 +689,8 @@ for i = 0:11
             fig2 = scatter!(fig2,[real(arr3[1])],[imag(arr3[1])],xerr=arr3[2],yerr=arr3[3],color="blue",marker=:cross)
             if true
                 if i == 11
-                    savefig(fig2,"plots/$(save_date)_CL_NewS_Cmodel2.pdf") # This is how to save a Julia plot as pdf !!!
-                    savefig(fig2,"plots/$(save_date)_CL_NewS_Cmodel2.png") # This is how to save a Julia plot as pdf !!!
+                    savefig(fig2,"$(savefig_name)_NewS_Cmodel2.pdf") # This is how to save a Julia plot as pdf !!!
+                    savefig(fig2,"$(savefig_name)_NewS_Cmodel2.png") # This is how to save a Julia plot as pdf !!!
                 end
             end
         end

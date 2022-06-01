@@ -1,5 +1,5 @@
 
-using FFTW, Plots, Printf, Random, Statistics
+using FFTW, Plots, Printf, Random, Statistics, DelimitedFiles
 
 export FFTW, Plots, Printf, Random, Statistics
 # export n_tau, idrate, h, m, ω, accept, sum1, sum2, sum3
@@ -198,7 +198,9 @@ function writee123tofile(n_tau,path,filename,exp_x,exp_x2,exp_x0x1, itt)
     end
 end
 
-"""Append the current Path, Path^2 and Path1*x on one line to a file"""
+"""
+Append the current Path, Path^2 and Path1*x on one line to a file
+"""
 function writec123tofile(path, filename, Path, itt)
     open(string(path,filename),"a") do file
         # write(file,"c_x,c_x2,c_x0x1\n")
@@ -227,6 +229,15 @@ function writec123tofile(path, filename, Path, itt)
         write(file,string(twopointcorr/pathl,"\n"))
     end
 end
+# function writec123tofile(save_name::AbstractString,Path,itt::Integer)
+#     open(save_name,"a") do file
+#         # write(file,"$(itt),")
+#         writedlm(file,transpose([itt,Path...,Path.^2...,
+#                         [Path[1]*Path[i] for i=1:length(Path)]...#[sum(Path[ii].*circshift(Path,i)[ii] for i=0:length(Path)-1]./length(Path)]
+#                         ]),',')
+#         # write(file,",")
+#     end
+# end
 
 function writec3s3tofile(path,filename,sum3)
     open(string(path,filename),"a") do file
