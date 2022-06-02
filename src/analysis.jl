@@ -2,8 +2,9 @@ using FFTW, Plots, Statistics, StatsBase
 
 export Err1, Jackknife1
 export LastRowFromFile, GetColumn, GetData, GetTwoPointData, GetTP1data, GetExpXData, GetLastMean
-export AutoCorrR, ACIntegrated, TPCF, EffM, Exp_x2e, Exp_x2
-export PlotAC, PlotACsb, PlotTPCF, PlotEffM, PlotProbDD, PlotProbDDe, PlotACwt, PlotACsbwt, PlotTPCFwt
+export AutoCorrR, ACIntegrated, TPCF, TPCFe, EffM, Exp_x2e, Exp_x2
+export PlotAC, PlotACsb, PlotTPCF, PlotTPCFe, PlotTPCFe!, PlotEffM
+export PlotProbDD, PlotProbDDe#, PlotACwt, PlotACsbwt, PlotTPCFwt
 # using PlotExp, plot_x
 
 
@@ -345,7 +346,7 @@ function TPCF(array1::AbstractVector)
     for i = 0:length(array1)-1
         twopointcorr1[i+1] = sum(array1 .* circshift(array1,-i))
     end
-    return twopointcorr1
+    return twopointcorr1./length(array1)
 end
 function TPCF(matrix1::AbstractMatrix)
     tpcr = Matrix{Float64}(undef,length(matrix1[1,:]),length(matrix1[:,1]))
@@ -360,9 +361,17 @@ function TPCF(matrix1::AbstractMatrix,Jackknife::Bool)
         for i = 1:length(matrix1[1,:])
             tpcr[i,:] = TPCF(matrix1[:,i])
         end
-        return Jackknife1(tpcr,true)
+        return Jackknife1(tpcr)
     end
     return TPCF(matrix1)
+end
+
+"""
+returns the analytical TPCF for the system
+"""
+function TPCFe(a,m,ω,n_tau)
+    R = 1 + (a*ω)^2/2 - a*ω*sqrt(1+(a*ω)^2/4)
+    return [(R^i+R^(n_tau-i)) for i=0:n_tau-1]./(1-R^n_tau)./(2*m*ω)
 end
 
 
@@ -450,7 +459,7 @@ function PlotAC(filename::AbstractString,leng)
 end
 function PlotAC(matrix1::AbstractMatrix)
     jkf1 = Jackknife1(AutoCorrR(matrix1))
-    plot(jkf1[:,1],yerr=jkf1[:,2],xlabel="Δt",ylabel="Aₒ(t)")
+    plot(jkf1[:,1],yerr=jkf1[:,2],xlabel="Δt",ylabel="Aₒ(Δt)")
 end
 function PlotAC(matrix1::AbstractMatrix,fullLength::Bool)
     if fullLength
@@ -460,7 +469,7 @@ function PlotAC(matrix1::AbstractMatrix,fullLength::Bool)
         autocorrdata = AutoCorrR(matrix1)[:,1:leng]
     end
     jkf1 = Jackknife1(autocorrdata)
-    plot(jkf1[:,1],yerr=jkf1[:,2],xlabel="Δt",ylabel="Aₒ(t)")
+    plot(jkf1[:,1],yerr=jkf1[:,2],xlabel="Δt",ylabel="Aₒ(Δt)")
 end
 function PlotAC(matrix1::AbstractMatrix,leng)
     if leng > length(matrix1[:,1])
@@ -468,10 +477,10 @@ function PlotAC(matrix1::AbstractMatrix,leng)
         println("PlotAC: Length specified to large, using full length ($(length(matrix1[:,1])))")
     end
     jkf1 = Jackknife1(AutoCorrR(matrix1)[:,1:leng])
-    plot(jkf1[:,1],yerr=jkf1[:,2],xlabel="Δt",ylabel="Aₒ(t)")
+    plot(jkf1[:,1],yerr=jkf1[:,2],xlabel="Δt",ylabel="Aₒ(Δt)")
 end
 function PlotAC(vector1::AbstractVector)
-    plot(AutoCorrR(vector1),xlabel="Δt",ylabel="Aₒ(t)")
+    plot(AutoCorrR(vector1),xlabel="Δt",ylabel="Aₒ(Δt)")
 end
 function PlotAC(vector1::AbstractVector,fullLength::Bool)
     if fullLength
@@ -480,49 +489,50 @@ function PlotAC(vector1::AbstractVector,fullLength::Bool)
         leng = 200
         autocorrdata = AutoCorrR(vector1)[:,1:leng]
     end
-    plot(autocorrdata,xlabel="Δt",ylabel="Aₒ(t)")
+    plot(autocorrdata,xlabel="Δt",ylabel="Aₒ(Δt)")
 end
 function PlotAC(vector1::AbstractVector,leng)
     if leng > length(vector1)
         leng = length(vector1)
         println("PlotAC: Length specified to large, using full length ($(length(vector1)))")
     end
-    plot(AutoCorrR(vector1)[:,1:leng],xlabel="Δt",ylabel="Aₒ(t)")
+    plot(AutoCorrR(vector1)[:,1:leng],xlabel="Δt",ylabel="Aₒ(Δt)")
 end
 
-"""
-Plots AutoCorrelation with title from file  
-Optional:  
-fullLength; plots only for first 200 in τ if false  
-leng; specify the number to plot in τ
-"""
-function PlotACwt(filename)
-    data1 = GetData(filename,4,1)
-    autocorrdata = AutoCorrR(data1)
-    jkf1 = Jackknife1(autocorrdata)
-    plot(jkf1[:,1],yerr=jkf1[:,2],title="AutoCorrelation",xlabel="τ",ylabel="Aₒ(τ)")
-end
-function PlotACwt(filename,fullLength::Bool)
-    data1 = GetData(filename,4,1)
-    if fullLength
-        autocorrdata = AutoCorrR(data1)
-    else
-        leng = 200
-        autocorrdata = AutoCorrR(data1)[:,1:leng]
-    end
-    jkf1 = Jackknife1(autocorrdata)
-    plot(jkf1[:,1],yerr=jkf1[:,2],title="AutoCorrelation",xlabel="τ",ylabel="Aₒ(τ)")
-end
-function PlotACwt(filename,leng)
-    data1 = GetData(filename,4,1)
-    if leng > length(data1[:,1])
-        leng = length(data1[:,1])
-        println("PlotAC: Length specified to large, using length(data1[:,1]) = N_meas")
-    end
-    autocorrdata = AutoCorrR(data1)[:,1:leng]
-    jkf1 = Jackknife1(autocorrdata)
-    plot(jkf1[:,1],yerr=jkf1[:,2],title="AutoCorrelation",xlabel="τ",ylabel="Aₒ(τ)")
-end
+# title!("title") to get title on plots
+# """
+# Plots AutoCorrelation with title from file  
+# Optional:  
+# fullLength; plots only for first 200 in τ if false  
+# leng; specify the number to plot in τ
+# """
+# function PlotACwt(filename)
+#     data1 = GetData(filename,4,1)
+#     autocorrdata = AutoCorrR(data1)
+#     jkf1 = Jackknife1(autocorrdata)
+#     plot(jkf1[:,1],yerr=jkf1[:,2],title="AutoCorrelation",xlabel="τ",ylabel="Aₒ(τ)")
+# end
+# function PlotACwt(filename,fullLength::Bool)
+#     data1 = GetData(filename,4,1)
+#     if fullLength
+#         autocorrdata = AutoCorrR(data1)
+#     else
+#         leng = 200
+#         autocorrdata = AutoCorrR(data1)[:,1:leng]
+#     end
+#     jkf1 = Jackknife1(autocorrdata)
+#     plot(jkf1[:,1],yerr=jkf1[:,2],title="AutoCorrelation",xlabel="τ",ylabel="Aₒ(τ)")
+# end
+# function PlotACwt(filename,leng)
+#     data1 = GetData(filename,4,1)
+#     if leng > length(data1[:,1])
+#         leng = length(data1[:,1])
+#         println("PlotAC: Length specified to large, using length(data1[:,1]) = N_meas")
+#     end
+#     autocorrdata = AutoCorrR(data1)[:,1:leng]
+#     jkf1 = Jackknife1(autocorrdata)
+#     plot(jkf1[:,1],yerr=jkf1[:,2],title="AutoCorrelation",xlabel="τ",ylabel="Aₒ(τ)")
+# end
 
 """
 Plots AutoCorrelation with StatsBase package from file  
@@ -535,7 +545,7 @@ function PlotACsb(filename)
     leng = length(data1[:,1])
     autocorrdata = transpose(StatsBase.autocor(data1,[i for i=0:leng-1]))
     jkf1 = Jackknife1(autocorrdata)
-    plot(jkf1[:,1],yerr=jkf1[:,2],xlabel="τ",ylabel="Aₒ(τ)")
+    plot(jkf1[:,1],yerr=jkf1[:,2],xlabel="Δt",ylabel="Aₒ(Δt)")
 end
 function PlotACsb(filename,fullLength::Bool)
     data1 = GetData(filename,4,1)
@@ -546,7 +556,7 @@ function PlotACsb(filename,fullLength::Bool)
         autocorrdata = transpose(StatsBase.autocor(data1))
     end
     jkf1 = Jackknife1(autocorrdata)
-    plot(jkf1[:,1],yerr=jkf1[:,2],xlabel="τ",ylabel="Aₒ(τ)")
+    plot(jkf1[:,1],yerr=jkf1[:,2],xlabel="Δt",ylabel="Aₒ(Δt)")
 end
 function PlotACsb(filename,leng)
     data1 = GetData(filename,4,1)
@@ -556,43 +566,44 @@ function PlotACsb(filename,leng)
     end
     autocorrdata = transpose(StatsBase.autocor(data1,[i for i=0:leng-1]))
     jkf1 = Jackknife1(autocorrdata)
-    plot(jkf1[:,1],yerr=jkf1[:,2],xlabel="τ",ylabel="Aₒ(τ)")
+    plot(jkf1[:,1],yerr=jkf1[:,2],xlabel="Δt",ylabel="Aₒ(Δt)")
 end
 
-"""
-Plots AutoCorrelation with StatsBase package with title from file  
-Optional:  
-fullLength; plots only for first few in τ if false  
-leng; specify the number to plot in τ
-"""
-function PlotACsbwt(filename)
-    data1 = GetData(filename,4,1)
-    leng = length(data1[:,1])
-    autocorrdata = transpose(StatsBase.autocor(data1,[i for i=0:leng-1]))
-    jkf1 = Jackknife1(autocorrdata)
-    plot(jkf1[:,1],yerr=jkf1[:,2],title="AutoCorr by StatsBase package",xlabel="τ",ylabel="Aₒ(τ)")
-end
-function PlotACsbwt(filename,fullLength::Bool)
-    data1 = GetData(filename,4,1)
-    if fullLength
-        leng = length(data1[:,1])
-        autocorrdata = transpose(StatsBase.autocor(data1,[i for i=0:leng-1]))
-    else
-        autocorrdata = transpose(StatsBase.autocor(data1))
-    end
-    jkf1 = Jackknife1(autocorrdata)
-    plot(jkf1[:,1],yerr=jkf1[:,2],title="AutoCorr by StatsBase package",xlabel="τ",ylabel="Aₒ(τ)")
-end
-function PlotACsbwt(filename,leng)
-    data1 = GetData(filename,4,1)
-    if leng > length(data1[:,1])
-        leng = length(data1[:,1])
-        println("PlotAC: Length specified to large, using length(data1[:,1]) = N_meas")
-    end
-    autocorrdata = transpose(StatsBase.autocor(data1,[i for i=0:leng-1]))
-    jkf1 = Jackknife1(autocorrdata)
-    plot(jkf1[:,1],yerr=jkf1[:,2],title="AutoCorr by StatsBase package",xlabel="τ",ylabel="Aₒ(τ)")
-end
+# title!("title") to get title on plots
+# """
+# Plots AutoCorrelation with StatsBase package with title from file  
+# Optional:  
+# fullLength; plots only for first few in τ if false  
+# leng; specify the number to plot in τ
+# """
+# function PlotACsbwt(filename)
+#     data1 = GetData(filename,4,1)
+#     leng = length(data1[:,1])
+#     autocorrdata = transpose(StatsBase.autocor(data1,[i for i=0:leng-1]))
+#     jkf1 = Jackknife1(autocorrdata)
+#     plot(jkf1[:,1],yerr=jkf1[:,2],title="AutoCorr by StatsBase package",xlabel="τ",ylabel="Aₒ(τ)")
+# end
+# function PlotACsbwt(filename,fullLength::Bool)
+#     data1 = GetData(filename,4,1)
+#     if fullLength
+#         leng = length(data1[:,1])
+#         autocorrdata = transpose(StatsBase.autocor(data1,[i for i=0:leng-1]))
+#     else
+#         autocorrdata = transpose(StatsBase.autocor(data1))
+#     end
+#     jkf1 = Jackknife1(autocorrdata)
+#     plot(jkf1[:,1],yerr=jkf1[:,2],title="AutoCorr by StatsBase package",xlabel="τ",ylabel="Aₒ(τ)")
+# end
+# function PlotACsbwt(filename,leng)
+#     data1 = GetData(filename,4,1)
+#     if leng > length(data1[:,1])
+#         leng = length(data1[:,1])
+#         println("PlotAC: Length specified to large, using length(data1[:,1]) = N_meas")
+#     end
+#     autocorrdata = transpose(StatsBase.autocor(data1,[i for i=0:leng-1]))
+#     jkf1 = Jackknife1(autocorrdata)
+#     plot(jkf1[:,1],yerr=jkf1[:,2],title="AutoCorr by StatsBase package",xlabel="τ",ylabel="Aₒ(τ)")
+# end
 
 
 #                                       #
@@ -606,29 +617,44 @@ end
 #     return tpcr
 # end
 """
-Plots the Two-Point Correlation Function from file
+Plots the Two-Point Correlation Function from file or matrix of data
 """
-function PlotTPCF(filename,logplot=true)
-    tpcr = Err1(GetTwoPointData(filename))
+function PlotTPCF(matrix1::AbstractMatrix,logplot=true)
+    tpcr = TPCF(transpose(matrix1))
     if logplot
         display(plot(tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,label="⟨x₍ᵢ₊ₓ₎xᵢ⟩",xlabel="Δτ",ylabel="G(Δτ)"))
     else
-        display(plot(tpcr[:,1],yerr=tpcr[:,2], label="⟨x₍ᵢ₊ₓ₎xᵢ⟩",xlabel="Δτ",ylabel="G(Δτ)"))
+        display(plot(tpcr[:,1],yerr=tpcr[:,2], label="⟨x₍ᵢ₊ⱼ₎xᵢ⟩ᵢ",xlabel="Δτ",ylabel="G(Δτ)"))
     end
     # plot!(tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩")
     return tpcr
 end
-function PlotTPCF(filename,Jackknife::Bool,logplot=true)
-    if Jackknife
-        tpcr = Jackknife1(GetTwoPointData(filename))
+function PlotTPCF(matrix1::AbstractMatrix,Jackknife::Bool,logplot=true)
+    tpcr = TPCF(transpose(matrix1),Jackknife)
+    if logplot
+        display(plot(tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,label="⟨x₍ᵢ₊ₓ₎xᵢ⟩",xlabel="Δτ",ylabel="G(Δτ)"))
     else
-        tpcr = Err1(GetTwoPointData(filename))
+        display(plot(tpcr[:,1],yerr=tpcr[:,2], label="⟨x₍ᵢ₊ⱼ₎xᵢ⟩ᵢ",xlabel="Δτ",ylabel="G(Δτ)"))
     end
+    return tpcr
+end
+function PlotTPCF(filename::AbstractString,logplot=true)
+    tpcr = Err1(GetTwoPointData(filename))
+    if logplot
+        display(plot(tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,label="⟨x₍ᵢ₊ₓ₎xᵢ⟩",xlabel="Δτ",ylabel="G(Δτ)"))
+    else
+        display(plot(tpcr[:,1],yerr=tpcr[:,2], label="⟨x₍ᵢ₊ⱼ₎xᵢ⟩ᵢ",xlabel="Δτ",ylabel="G(Δτ)"))
+    end
+    # plot!(tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩")
+    return tpcr
+end
+function PlotTPCF(filename::AbstractString,Jackknife::Bool,logplot=true)
+    tpcr = TPCF(filename,Jackknife)
     # println(tpcr[:,1])
     if logplot
         display(plot(tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,label="⟨x₍ᵢ₊ₓ₎xᵢ⟩",xlabel="Δτ",ylabel="G(Δτ)"))
     else
-        display(plot(tpcr[:,1],yerr=tpcr[:,2], label="⟨x₍ᵢ₊ₓ₎xᵢ⟩",xlabel="Δτ",ylabel="G(Δτ)"))
+        display(plot(tpcr[:,1],yerr=tpcr[:,2], label="⟨x₍ᵢ₊ⱼ₎xᵢ⟩ᵢ",xlabel="Δτ",ylabel="G(Δτ)"))
     end
     # open("results/Twopointdata.csv","a") do file
     #     for i = 1:length(tpcr[:,1])
@@ -639,37 +665,52 @@ function PlotTPCF(filename,Jackknife::Bool,logplot=true)
 end
 
 """
-Plots the Two-Point Correlation Function with title from file
+Plots the expected TPCF for a system
 """
-function PlotTPCFwt(filename,logplot=true)
-    tpcr = Err1(GetTwoPointData(filename))
-    if logplot
-        display(plot(tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩",xlabel="Δτ",ylabel="G(Δτ)"))
-    else
-        display(plot(tpcr[:,1],yerr=tpcr[:,2],title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩",xlabel="Δτ",ylabel="G(Δτ)"))
-    end
-    # plot!(tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩")
-    return tpcr
+function PlotTPCFe(a,m,ω,n_tau)
+    plot(TPCFe(a,m,ω,n_tau),label="TPC_exp")
 end
-function PlotTPCFwt(filename,Jackknife::Bool,logplot=true)
-    if Jackknife
-        tpcr = Jackknife1(GetTwoPointData(filename))
-    else
-        tpcr = Err1(GetTwoPointData(filename))
-    end
-    # println(tpcr[:,1])
-    if logplot
-        display(plot(tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩",xlabel="Δτ",ylabel="G(Δτ)"))
-    else
-        display(plot(tpcr[:,1],yerr=tpcr[:,2],title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩",xlabel="Δτ",ylabel="G(Δτ)"))
-    end
-    # open("results/Twopointdata.csv","a") do file
-    #     for i = 1:length(tpcr[:,1])
-    #         write(file,string(i/2-1/2," ",tpcr[i,1]," ",tpcr[i,2],"\n"))
-    #     end
-    # end
-    return tpcr
+
+"""
+Plots the expected TPCF for a system, appending to previous plot
+"""
+function PlotTPCFe!(a,m,ω,n_tau)
+    plot!(TPCFe(a,m,ω,n_tau),label="TPC_exp")
 end
+
+# title!("title") to get title on plots
+# """
+# Plots the Two-Point Correlation Function with title from file
+# """
+# function PlotTPCFwt(filename,logplot=true)
+#     tpcr = Err1(GetTwoPointData(filename))
+#     if logplot
+#         display(plot(tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩",xlabel="Δτ",ylabel="G(Δτ)"))
+#     else
+#         display(plot(tpcr[:,1],yerr=tpcr[:,2],title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩",xlabel="Δτ",ylabel="G(Δτ)"))
+#     end
+#     # plot!(tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩")
+#     return tpcr
+# end
+# function PlotTPCFwt(filename,Jackknife::Bool,logplot=true)
+#     if Jackknife
+#         tpcr = Jackknife1(GetTwoPointData(filename))
+#     else
+#         tpcr = Err1(GetTwoPointData(filename))
+#     end
+#     # println(tpcr[:,1])
+#     if logplot
+#         display(plot(tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩",xlabel="Δτ",ylabel="G(Δτ)"))
+#     else
+#         display(plot(tpcr[:,1],yerr=tpcr[:,2],title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩",xlabel="Δτ",ylabel="G(Δτ)"))
+#     end
+#     # open("results/Twopointdata.csv","a") do file
+#     #     for i = 1:length(tpcr[:,1])
+#     #         write(file,string(i/2-1/2," ",tpcr[i,1]," ",tpcr[i,2],"\n"))
+#     #     end
+#     # end
+#     return tpcr
+# end
 
 
 

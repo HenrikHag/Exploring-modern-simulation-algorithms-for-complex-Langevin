@@ -229,6 +229,34 @@ function writec123tofile(path, filename, Path, itt)
         write(file,string(twopointcorr/pathl,"\n"))
     end
 end
+function writec123tofile(save_name::AbstractString, Path, itt)
+    open(save_name,"a") do file
+        # write(file,"c_x,c_x2,c_x0x1\n")
+        write(file,string(Int64(itt),","))
+        pathl=length(Path)
+        for i = 1:pathl         # Path
+            write(file,string(Path[i],","))
+        end
+        for i = 1:pathl         # Path.^2
+            write(file,string(Path[i]^2,","))
+        end
+        for i = 1:pathl         # Path_1*Path_i
+            write(file,string(Path[1]*Path[i],","))
+        end
+        for i = 0:pathl-2       # Two-Point Correlation
+            twopointcorr=0
+            for ii=1:pathl
+                twopointcorr += Path[ii]*Path[(ii+i-1)%pathl+1]
+            end
+            write(file,string(twopointcorr/pathl,","))
+        end
+        twopointcorr=0
+        for ii=1:pathl
+            twopointcorr += Path[ii]*Path[(ii+pathl-2)%pathl+1]
+        end
+        write(file,string(twopointcorr/pathl,"\n"))
+    end
+end
 # function writec123tofile(save_name::AbstractString,Path,itt::Integer)
 #     open(save_name,"a") do file
 #         # write(file,"$(itt),")

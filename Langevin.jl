@@ -7,6 +7,7 @@ begin
     using Plots
     using StochasticDiffEq#, DifferentialEquations
     using LabelledArrays
+    using BenchmarkTools
     save_path = "results/"
     save_date = findDate()
     savefig_folder="plots/"
@@ -28,18 +29,46 @@ end
 
 # Old Langevin simulation on AHO
 
+
 # Generator for gaussian distributed random numbers
 gaussianD = Normal(0,1)
 
 # Define parameters
-# β=8; n_tau=16; a=β/n_tau; m=1; μ=1; λ=0;
+# β=8.; n_tau=16; a=β/n_tau; m=1.; μ=1.; λ=0.;
 phys_p = AHO_L_param_old(8.,16,1.,1.,0.)
 dt=0.001; n_burn=3/dt; n_skip=3/dt;
-sim_p = Simulation_param_old(100,n_burn,n_skip,dt)
+sim_p = Simulation_param_old(1000,n_burn,n_skip,dt)
 
+
+
+# Simulation giving configurations in matrix [N_total,N_tau]
 res1 = Langevin_old(phys_p,sim_p,gaussianD)
 
-PlotAC(res1)
+# Analysis
+PlotAC(res1,300)
+# title!("Autocorrelation")
+savefig("$(save_folder)$(save_date)_L_old_AC.png") # .pdf for pdf quality plot
+PlotTPCF(res1)
+PlotTPCFe!(0.5,1,1,16)
+# title!("Two-point correlation")
+savefig("$(save_folder)$(save_date)_L_old_TPCF.png")
+
+
+
+# Simulation appending configurations to file "$(savename)"
+    # For a new, clean simulation, delete the existing file
+save_name = "$(save_path)$(save_date)_L_old_simulation.csv"
+Langevin_old(phys_p,sim_p,gaussianD,save_name)
+
+# Analysis
+PlotAC(save_name)
+# title!("Autocorrelation")
+savefig("$(save_folder)$(save_date)_L_old_AC.png") # .pdf for pdf quality plot
+PlotTPCF(save_name)
+PlotTPCFe!(0.5,1,1,16)
+# title!("Two-point correlation")
+savefig("$(save_folder)$(save_date)_L_old_TPCF.png")
+
 
 
 
@@ -492,50 +521,10 @@ a = [0.990894    0.00115783;
 ## Complex Langevin solver package ###
 ######################################
 
-# Write exactly what the function does
-"""
-`ϕ = ∑ᵢ m/2 a[((ϕᵢ₊₁-ϕᵢ)/a)² + μϕᵢ²]`  
-`ϕⱼ = m/2 a[((ϕⱼ₊₁-ϕⱼ)/a)² + ((ϕⱼ-ϕⱼ₋₁)/a)² + μϕⱼ²]`  
-`∂ϕ/∂ϕⱼ = ∂/∂ϕⱼ m a [(ϕⱼ²-(ϕⱼ)(ϕⱼ₊₁+ϕⱼ₋₁))/a² + μ/2 ϕⱼ²]`  
-`       = m a [(2ϕⱼ - ϕⱼ₊₁ - ϕⱼ₋₁)/a² + μϕⱼ]`
-"""
-function ActionCLDerSchem(du, u, params, t)
-    p = params.p
-    xR = @view u[1:div(end,2)]
-    xI = @view u[div(end,2)+1:end]
-    Fr_diff_m1 = xR .- xR[vcat(end,1:end-1)]   # dx_j - dx_{j-1}
-    Fr_diff_p1 = xR[vcat(2:end,1)] .- xR       # dx_{j+1} - dx_j
-    Fi_diff_m1 = xI .- xI[vcat(end,1:end-1)]   # dx_j - dx_{j-1}
-    Fi_diff_p1 = xI[vcat(2:end,1)] .- xI       # dx_{j+1} - dx_j
-    # dx_j - dx_{j-1} - (dx_{j+1} - dx_j) = 2dx_j - dx_{j+1} - dx_{j-1}
-    du[1:div(end,2)] .= p.m .* real.(Fr_diff_p1 .- Fr_diff_m1 .+ im .* (Fi_diff_p1 .- Fi_diff_m1)) ./ p.a^2 .- real.(p.mu .* xR .+ im .* (p.mu .* xI))
-    du[div(end,2)+1:end] .= p.m .* imag.(im .* (Fi_diff_p1 .- Fi_diff_m1) .+ (Fr_diff_p1 .- Fr_diff_m1)) ./ p.a^2 .- imag.(p.mu .* xR .+ im .* (p.mu .* xI))
-end
-# ActionCLDerSchem([1,2,1,1,2,1],params)
 
-function RandScale(du, u, param, t)
-    a = param.p.a
-    du[1:div(end,2)] .= sqrt.(2. ./ a)
-end
-
-function LangevinSchem(N,a,m,mu,la,gaussianD)
-    n_tau = 16
-    F0 = append!([20. for i = 1:n_tau],[0. for i = 1:n_tau])
-    # Flist = Matrix{Float64}(undef,N+1,n_tau)
-    # Flist[1,:] = F0
-    dt = 0.01
-    timespan = (0.0,3*N)
-    # params = Lvector(p=struct w fields m μ λ)
-    params = LVector(p=AHO_CL_Param(a,m,mu,la))
-    # Function to calculate change in action for whole path
-    sdeprob1 = SDEProblem(ActionCLDerSchem,RandScale,F0,timespan,params)
-
-    @time sol = solve(sdeprob1, Euler(), progress=true, saveat=0.01/dt, save_start=false,
-                dtmax=1e-3, dt=dt, abstol=5e-2,reltol=5e-2)
-end
 
 mu = exp(im*π/3)
-Solution1 = LangevinSchem(80000,0.5,1,mu,0,gaussianD)
+Solution1 = CLangevinSchem(80000,0.5,1,mu,0)
 plot(Solution1)
 Solution1.u
 
