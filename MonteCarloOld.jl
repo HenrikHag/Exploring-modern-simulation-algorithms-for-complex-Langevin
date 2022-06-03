@@ -194,15 +194,19 @@ main(n_tau,"22.05.12_M_β$(β)_$(n_tau)_fullAC_expfull.csv","22.05.12_M_β$(β)_
 
 analysisFile = "results/22.05.12_M_β8_16_fullAC_measuredObs.csv"
 PlotAC(analysisFile,300)
-savefig("plots/22.05.12_M_β8_16_fullAC_notitle.pdf")
-savefig("plots/22.05.12_M_β8_16_fullAC_notitle.png")
+# title!("Autocorrelation")
+savefig("plots/22.05.12_M_β8_16_fullAC.pdf")
+savefig("plots/22.05.12_M_β8_16_fullAC.png")
 PlotACsb(analysisFile,300)
-savefig("plots/22.05.12_M_β8_16_fullACsb_notitle.pdf")
-savefig("plots/22.05.12_M_β8_16_fullACsb_notitle.png")
+# title!("Autocorrelation StatsBase")
+savefig("plots/22.05.12_M_β8_16_fullACsb.pdf")
+savefig("plots/22.05.12_M_β8_16_fullACsb.png")
 PlotTPCF(analysisFile,true)
+# title!("Two-Point Correlation")
 savefig("plots/22.05.12_M_β8_16_fullAC_TPCF.pdf")
 savefig("plots/22.05.12_M_β8_16_fullAC_TPCF.png")
 PlotEffM(analysisFile)
+# title!("Effective Mass")
 
 
 

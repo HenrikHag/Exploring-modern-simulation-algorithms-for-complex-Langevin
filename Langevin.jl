@@ -9,8 +9,8 @@ begin
     using LabelledArrays
     using BenchmarkTools
     save_path = "results/"
-    save_date = findDate()
-    savefig_folder="plots/"
+    save_date = findDate() # Save date for plot names
+    save_folder = "plots/" # Where to store plots
 end
 
 # import Pkg; Pkg.activate("."); Pkg.instantiate()
@@ -61,7 +61,7 @@ save_name = "$(save_path)$(save_date)_L_old_simulation.csv"
 Langevin_old(phys_p,sim_p,gaussianD,save_name)
 
 # Analysis
-PlotAC(save_name)
+PlotAC(save_name)   # save_name = name of file storing the results from simulation
 # title!("Autocorrelation")
 savefig("$(save_folder)$(save_date)_L_old_AC.png") # .pdf for pdf quality plot
 PlotTPCF(save_name)

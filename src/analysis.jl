@@ -622,9 +622,9 @@ Plots the Two-Point Correlation Function from file or matrix of data
 function PlotTPCF(matrix1::AbstractMatrix,logplot=true)
     tpcr = TPCF(transpose(matrix1))
     if logplot
-        display(plot(tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,label="⟨x₍ᵢ₊ₓ₎xᵢ⟩",xlabel="Δτ",ylabel="G(Δτ)"))
+        display(plot([0:length(tpcr[:,1])-1],tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,label="⟨x₍ᵢ₊ₓ₎xᵢ⟩",xlabel="Δτ",ylabel="G(Δτ)"))
     else
-        display(plot(tpcr[:,1],yerr=tpcr[:,2], label="⟨x₍ᵢ₊ⱼ₎xᵢ⟩ᵢ",xlabel="Δτ",ylabel="G(Δτ)"))
+        display(plot([0:length(tpcr[:,1])-1],tpcr[:,1],yerr=tpcr[:,2], label="⟨x₍ᵢ₊ⱼ₎xᵢ⟩ᵢ",xlabel="Δτ",ylabel="G(Δτ)"))
     end
     # plot!(tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩")
     return tpcr
@@ -632,18 +632,18 @@ end
 function PlotTPCF(matrix1::AbstractMatrix,Jackknife::Bool,logplot=true)
     tpcr = TPCF(transpose(matrix1),Jackknife)
     if logplot
-        display(plot(tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,label="⟨x₍ᵢ₊ₓ₎xᵢ⟩",xlabel="Δτ",ylabel="G(Δτ)"))
+        display(plot([0:length(tpcr[:,1])-1],tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,label="⟨x₍ᵢ₊ₓ₎xᵢ⟩",xlabel="Δτ",ylabel="G(Δτ)"))
     else
-        display(plot(tpcr[:,1],yerr=tpcr[:,2], label="⟨x₍ᵢ₊ⱼ₎xᵢ⟩ᵢ",xlabel="Δτ",ylabel="G(Δτ)"))
+        display(plot([0:length(tpcr[:,1])-1],tpcr[:,1],yerr=tpcr[:,2], label="⟨x₍ᵢ₊ⱼ₎xᵢ⟩ᵢ",xlabel="Δτ",ylabel="G(Δτ)"))
     end
     return tpcr
 end
 function PlotTPCF(filename::AbstractString,logplot=true)
     tpcr = Err1(GetTwoPointData(filename))
     if logplot
-        display(plot(tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,label="⟨x₍ᵢ₊ₓ₎xᵢ⟩",xlabel="Δτ",ylabel="G(Δτ)"))
+        display(plot([0:length(tpcr[:,1])-1],tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,label="⟨x₍ᵢ₊ₓ₎xᵢ⟩",xlabel="Δτ",ylabel="G(Δτ)"))
     else
-        display(plot(tpcr[:,1],yerr=tpcr[:,2], label="⟨x₍ᵢ₊ⱼ₎xᵢ⟩ᵢ",xlabel="Δτ",ylabel="G(Δτ)"))
+        display(plot([0:length(tpcr[:,1])-1],tpcr[:,1],yerr=tpcr[:,2], label="⟨x₍ᵢ₊ⱼ₎xᵢ⟩ᵢ",xlabel="Δτ",ylabel="G(Δτ)"))
     end
     # plot!(tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩")
     return tpcr
@@ -652,9 +652,9 @@ function PlotTPCF(filename::AbstractString,Jackknife::Bool,logplot=true)
     tpcr = TPCF(filename,Jackknife)
     # println(tpcr[:,1])
     if logplot
-        display(plot(tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,label="⟨x₍ᵢ₊ₓ₎xᵢ⟩",xlabel="Δτ",ylabel="G(Δτ)"))
+        display(plot([0:length(tpcr[:,1])-1],tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,label="⟨x₍ᵢ₊ₓ₎xᵢ⟩",xlabel="Δτ",ylabel="G(Δτ)"))
     else
-        display(plot(tpcr[:,1],yerr=tpcr[:,2], label="⟨x₍ᵢ₊ⱼ₎xᵢ⟩ᵢ",xlabel="Δτ",ylabel="G(Δτ)"))
+        display(plot([0:length(tpcr[:,1])-1],tpcr[:,1],yerr=tpcr[:,2], label="⟨x₍ᵢ₊ⱼ₎xᵢ⟩ᵢ",xlabel="Δτ",ylabel="G(Δτ)"))
     end
     # open("results/Twopointdata.csv","a") do file
     #     for i = 1:length(tpcr[:,1])
@@ -668,14 +668,24 @@ end
 Plots the expected TPCF for a system
 """
 function PlotTPCFe(a,m,ω,n_tau)
-    plot(TPCFe(a,m,ω,n_tau),label="TPC_exp")
+    plot([0:n_tau-1],TPCFe(a,m,ω,n_tau),label="TPC_exp")
+end
+function PlotTPCFe(param)
+    n_tau, a, m, μ = param.n_tau, param.a, param.m, param.μ
+    ω = sqrt((μ/m))
+    plot([0:n_tau-1],TPCFe(a,m,ω,n_tau),label="TPC_exp")
 end
 
 """
 Plots the expected TPCF for a system, appending to previous plot
 """
 function PlotTPCFe!(a,m,ω,n_tau)
-    plot!(TPCFe(a,m,ω,n_tau),label="TPC_exp")
+    plot!([0:n_tau-1],TPCFe(a,m,ω,n_tau),label="TPC_exp")
+end
+function PlotTPCFe!(param)
+    n_tau, a, m, μ = param.n_tau, param.a, param.m, param.μ
+    ω = sqrt(μ/m)
+    plot!([0:n_tau-1],TPCFe(a,m,ω,n_tau),label="TPC_exp")
 end
 
 # title!("title") to get title on plots
@@ -750,12 +760,33 @@ end
 #   Plot Probability density diagram    #
 #                                       #
 """
-Plots Probability Density Diagram from data in column 2:n_tau+1  
+Plots Probability Density Diagram from data file, array or matrix 
 """
-function PlotProbDD(file,incsize1)
+function PlotProbDD(file::AbstractString)
+    arr1 = GetColumn(2:Int((length(LastRowFromFile(file))-1)/4)+1,file)
+    arr1 = reshape(arr1,:)
+    histogram(arr1,bins=[i for i=floor(minimum(arr1)*10)/10:0.1:(floor(maximum(arr1)*10)+1)/10],normed=true,xlabel="x",ylabel="|ψ₀|²",legend=false)#,weights=repeat([1/length(arr1)],length(arr1))
+end
+function PlotProbDD(file::AbstractString,incsize1)
     arr1 = GetColumn(2:Int((length(LastRowFromFile(file))-1)/4)+1,file)
     arr1 = reshape(arr1,:)
     histogram(arr1,bins=[i for i=floor(minimum(arr1)*10)/10:incsize1:(floor(maximum(arr1)*10)+1)/10],normed=true,xlabel="x",ylabel="|ψ₀|²",legend=false)#,weights=repeat([1/length(arr1)],length(arr1))
+end
+function PlotProbDD(array1::AbstractArray)
+    array1 = reshape(array1,:)
+    histogram(array1,bins=[i for i=floor(minimum(array1)*10)/10:0.1:(floor(maximum(array1)*10)+1)/10],normed=true,xlabel="x",ylabel="|ψ₀|²",legend=false)#,weights=repeat([1/length(arr1)],length(arr1))
+end
+function PlotProbDD(array1::AbstractArray,incsize1)
+    array1 = reshape(array1,:)
+    histogram(array1,bins=[i for i=floor(minimum(array1)*10)/10:incsize1:(floor(maximum(array1)*10)+1)/10],normed=true,xlabel="x",ylabel="|ψ₀|²",legend=false)#,weights=repeat([1/length(arr1)],length(arr1))
+end
+function PlotProbDD(matr1::AbstractMatrix)
+    matr1 = reshape(matr1,:)
+    histogram(matr1,bins=[i for i=floor(minimum(matr1)*10)/10:0.1:(floor(maximum(matr1)*10)+1)/10],normed=true,xlabel="x",ylabel="|ψ₀|²",legend=false)#,weights=repeat([1/length(arr1)],length(arr1))
+end
+function PlotProbDD(matr1::AbstractMatrix,incsize1)
+    matr1 = reshape(matr1,:)
+    histogram(matr1,bins=[i for i=floor(minimum(matr1)*10)/10:incsize1:(floor(maximum(matr1)*10)+1)/10],normed=true,xlabel="x",ylabel="|ψ₀|²",legend=false)#,weights=repeat([1/length(arr1)],length(arr1))
 end
 
 """

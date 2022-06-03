@@ -1,8 +1,9 @@
 # Plot different values
-using MCMC
-using Plots
-using Random
-
+begin
+    using MCMC
+    using Plots
+    using Random
+end
 
 
 
