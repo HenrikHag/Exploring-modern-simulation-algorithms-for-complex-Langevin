@@ -31,7 +31,16 @@ mean(GetData(measf,4,1)[:,1].^2)
 
 
 PlotAC(measf)
-TPCF(measf)[end,:]
+# title!("Autocorrelation")
+savefig("$(save_folder)$(save_date)_M_b8_AC.pdf")
+savefig("$(save_folder)$(save_date)_M_b8_AC.png")
+
+PlotTPCF(measf)
+PlotTPCFe!(0.5,1,1,16)
+# title!("Two-Point Correlation")
+savefig("$(save_folder)$(save_date)_M_b8_TPCF.pdf")
+savefig("$(save_folder)$(save_date)_M_b8_TPCF.png")
+
 TPCF(measf,true)[end,:]
 
 

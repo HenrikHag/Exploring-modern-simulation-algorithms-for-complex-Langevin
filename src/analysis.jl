@@ -231,7 +231,7 @@ end
 #           Auto Correlation            #
 #                                       #
 """
-returns AutoCorrelation of arrayC.  
+returns real part of FFT AutoCorrelation of arrayC.  
 returns a matrix of correlations → if matrix of configs ↓ is passed.  
 `[t_MC,xᵢ] → [xᵢ,AC(t_MC)]`
 """
@@ -680,7 +680,7 @@ end
 Plots the expected TPCF for a system, appending to previous plot
 """
 function PlotTPCFe!(a,m,ω,n_tau)
-    plot!([0:n_tau-1],TPCFe(a,m,ω,n_tau),label="TPC_exp")
+    plot!([0:n_tau-1],TPCFe(a,m,ω,n_tau),label="TPC_exp",linewidth=1)
 end
 function PlotTPCFe!(param)
     n_tau, a, m, μ = param.n_tau, param.a, param.m, param.μ
