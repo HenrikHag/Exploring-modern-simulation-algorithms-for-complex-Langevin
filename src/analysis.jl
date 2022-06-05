@@ -2,9 +2,10 @@ using FFTW, Plots, Statistics, StatsBase
 
 export Err1, Jackknife1
 export LastRowFromFile, GetColumn, GetData, GetTwoPointData, GetTP1data, GetExpXData, GetLastMean
-export AutoCorrR, ACIntegrated, TPCF, TPCFe, EffM, Exp_x2e, Exp_x2
+export AutoCorrR, ACIntegrated, TPCF, TPCFe, EffM, Exp_x2e, Exp_x2, Autocorrelation_BySummation
 export PlotAC, PlotACsb, PlotTPCF, PlotTPCFe, PlotTPCFe!, PlotEffM
 export PlotProbDD, PlotProbDDe#, PlotACwt, PlotACsbwt, PlotTPCFwt
+export Autocorrelation_BySummation, PlotAC_BySummation
 # using PlotExp, plot_x
 
 
@@ -231,11 +232,38 @@ end
 #           Auto Correlation            #
 #                                       #
 """
+returns autocorrelation of a vector or matrix by slow summation
+"""
+function Autocorrelation_BySummation(arrayC::AbstractArray)
+    a = copy(arrayC)
+    append!(a,zeros(length(arrayC)))
+    acc = [sum(a.*circshift(a,-i)) for i=0:length(arrayC)-1]
+    var = acc[1]
+    return acc./var
+end
+function Autocorrelation_BySummation(matrixC::AbstractMatrix)
+    CorrD = Matrix{Float64}(undef,length(matrixC[1,:]),length(matrixC[:,1]))
+    for i=1:length(matrixC[1,:])
+        CorrD[i,:] = Autocorrelation_BySummation(matrixC[:,i])
+    end
+    return CorrD
+end
+
+"""
+Plots the linear autocorrelation from a matrix by Jacknife average of columns
+"""
+function PlotAC_BySummation(matrix1::AbstractMatrix)
+    autocorrdata = Autocorrelation_BySummation(matrix1)
+    jkf1 = Jackknife1(autocorrdata)
+    plot(jkf1[:,1],yerr=jkf1[:,2],xlabel="Δt",ylabel="Aₒ(Δt)")
+end
+
+"""
 returns real part of FFT AutoCorrelation of arrayC.  
 returns a matrix of correlations → if matrix of configs ↓ is passed.  
 `[t_MC,xᵢ] → [xᵢ,AC(t_MC)]`
 """
-function AutoCorrR(arrayC)
+function AutoCorrR(arrayC::AbstractArray)
     mean1 = mean(arrayC)
     arrayCm = arrayC .- mean1
     autoCorr = fft(arrayCm)
@@ -244,7 +272,7 @@ function AutoCorrR(arrayC)
     e1 = autoCorr[1]
     return real.((autoCorr)./e1)
 end
-function AutoCorrR(arrayC,norm::Bool)
+function AutoCorrR(arrayC::AbstractArray,norm::Bool)
     mean1 = mean(arrayC)
     arrayCm = arrayC .- mean1
     autoCorr = fft(arrayCm)
@@ -252,7 +280,7 @@ function AutoCorrR(arrayC,norm::Bool)
     autoCorr = ifft(arrayCm)
     e1 = autoCorr[1]
     if !norm
-        return autoCorr
+        return real.(autoCorr)
     end
     return real.((autoCorr)./e1)
 end

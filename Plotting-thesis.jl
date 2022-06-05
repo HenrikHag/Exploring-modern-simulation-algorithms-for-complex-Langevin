@@ -75,3 +75,21 @@ xlabel!("Real time t")
 ylabel!("Euclidean time τ")
 savefig("plots/$(findDate())_EuclideanTimeContourPath.pdf")
 savefig("plots/$(findDate())_EuclideanTimeContourPath.png")
+
+
+
+
+# Slow autocorrelation
+a = [1,2,3,4,5,6,7,6,5,4,3,2,1]
+a = 
+append!(a,zeros(length(a)))
+for i=1:div(length(a),2)
+    println(sum(a.*circshift(a,-i)))
+end
+
+ac_data = GetData("results/measuredObsHO_1_β8_16.csv",4,1)[:,:]
+PlotAC(ac_data)
+PlotAC_BySummation(ac_data)
+title!("Autocorrelation by summation")
+savefig("plots/$(findDate())_AC_by_summation.pdf")
+savefig("plots/$(findDate())_AC_by_summation.png")
