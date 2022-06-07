@@ -14,6 +14,8 @@ end
 measf = "results/measuredObsHO_1_β8_16.csv"#"results/measuredObsB100S0_7.csv"
 measf = "results/22.05.24_M_β8_16_fullAC_measuredObs.csv"
 measf = "saved_results/22.06.07_M_shortSim_obs.csv"
+measf = "saved_results/22.06.07_M_shortSim_HighAC_obs.csv"
+measf = "results/22.06.07_M_midSim_HighAC_obs.csv"
 expf = "results/expfullHO_10_1.csv"
 
 #                                               #
@@ -217,42 +219,46 @@ end
 # plot(expxDatawErr[:,1],yerr=expxDatawErr[:,2])
 
 begin   # ⟨x₁⟩
-    save_name = "$(save_folder)$(save_date)_M_shortSim"
+    save_name = "$(save_folder)$(save_date)_M_midSim_HighAC"
     a1=[]
-    a = GetData(measf,4,1)[1:400,1]
+    a = GetData(measf,4,1)[1:1000,1]
     for i = 1:length(a)
         append!(a1,mean(a[1:i]))
     end
-    scatter(a,xlabel="t",ylabel="⟨x⟩")
-    plt = plot!(a1,width=4)
+    plt = scatter(a,xlabel="t",ylabel="⟨x⟩",label="x₁")
+    plot!(plt,a1,width=4,label="⟨x₁⟩")
+    hline!(plt,[0],label="⟨x⟩ₜₕₑₒ")
     display(plt)
-    savefig(plt,"$(save_name).pdf")   # Save as pdf in folder "plots"
-    savefig(plt,"$(save_name).png")   # Save as png in folder "plots"
+    savefig(plt,"$(save_name)_x_1.pdf")   # Save as pdf in folder "plots"
+    savefig(plt,"$(save_name)_x_1.png")   # Save as png in folder "plots"
 end
 
 begin   # ⟨x₁²⟩
-    save_name = "$(save_folder)$(save_date)_M_shortSim"
+    save_name = "$(save_folder)$(save_date)_M_midSim_HighAC"
     a1=[]
-    a = GetData(measf,4,1)[1:400,1].^2
+    a = GetData(measf,4,1)[1:1000,1].^2
     for i = 1:length(a)
         append!(a1,mean(a[1:i]))
     end
-    scatter(a,xlabel="t",ylabel="⟨x²⟩")
-    plt = plot!(a1,width=4)
+    plt = scatter(a,xlabel="t",ylabel="⟨x²⟩",label="x₁²")
+    plot!(plt,a1,width=4,label="⟨x₁²⟩")
+    hline!(plt,[Exp_x2e(16,0.5,1,1)],label="⟨x²⟩ₜₕₑₒ continuum")
     display(plt)
-    savefig(plt,"$(save_name).pdf")   # Save as pdf in folder "plots"
-    savefig(plt,"$(save_name).png")   # Save as png in folder "plots"
+    savefig(plt,"$(save_name)_x2_1.pdf")   # Save as pdf in folder "plots"
+    savefig(plt,"$(save_name)_x2_1.png")   # Save as png in folder "plots"
 end
 Exp_x2(16,0.95,1,1)
 
 begin   # ⟨xᵢ⟩, ⟨xᵢ²⟩
-    save_name = "$(save_folder)$(save_date)_M_expect_x_x2"
-    a1 = Jackknife1(GetData(measf,4,1),true)
-    plot(a1[:,1],yerr=a1[:,2],legend=false,xlabel="O(τ)",ylabel="⟨O⟩")
-    a2 = Jackknife1(GetData(measf,4,1).^2,true)
-    plot!(a2[:,1],yerr=a2[:,2])
-    plt = hline!([Exp_x2e(16,0.5,1,1),0])
+    save_name = "$(save_folder)$(save_date)_M_midSim_HighAC_err"
+    # a1 = Jackknife1(GetData(measf,4,1),true)
+    a1 = Err1(GetData(measf,4,1))
+    plt = plot(a1[:,1],yerr=a1[:,2],legend=:right,xlabel="τ",ylabel="⟨O⟩",label="⟨x(τ)⟩")
+    # a2 = Jackknife1(GetData(measf,4,1).^2,true)
+    a2 = Err1(GetData(measf,4,1).^2)
+    plot!(plt,a2[:,1],yerr=a2[:,2],label="⟨x²(τ)⟩")
+    hline!(plt,[[Exp_x2e(16,0.5,1,1)],[0]],label=["⟨xᵢ²⟩ₜₕₑₒ continuum" ""],color=["black" "black"])
     display(plt)
-    # savefig(plt,"$(save_name).pdf")   # Save as pdf in folder "plots"
-    # savefig(plt,"$(save_name).png")   # Save as png in folder "plots"
+    savefig(plt,"$(save_name)_x_x2.pdf")   # Save as pdf in folder "plots"
+    savefig(plt,"$(save_name)_x_x2.png")   # Save as png in folder "plots"
 end

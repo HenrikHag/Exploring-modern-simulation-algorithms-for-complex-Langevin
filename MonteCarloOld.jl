@@ -65,8 +65,8 @@ end
 #########################
 
 phys_param = getAHO_M_param(16,8,1,1,0)
-sim_param = getSim_M_param(400,100,20,0.8,rng)
-MetropolisSim(phys_param, sim_param, save_pre, "shortSim")
+sim_param = getSim_M_param(1000,200,1,0.8,rng)
+MetropolisSim(phys_param, sim_param, save_pre, "midSim_HighAC")
 
 PlotAC("$(save_pre)shortSim_obs.csv")
 
