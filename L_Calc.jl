@@ -63,12 +63,12 @@ begin   # ⟨xᵢ⟩, ⟨xᵢ²⟩
     a1 = Jackknife1(GetData(measf,4,1)[:,:],true)
     a2 = Jackknife1(GetData(measf,4,1)[:,:].^2,true)
     
-    plt = plot(a1[:,1],yerr=a1[:,2],label="⟨xᵢ⟩",legend=:right)
+    plt = plot(a1[:,1],yerr=a1[:,2],label="⟨xᵢ⟩",legend=:right,xlabel="O(τ)",ylabel="⟨O⟩")
     plot!(plt,a2[:,1],yerr=a2[:,2],label="⟨xᵢ²⟩")
     hline!(plt,[[Exp_x2e(16,0.5,1,1)],[Exp_x2(16,0.5,1,1)],[0]],label=["⟨xᵢ²⟩ₜₕₑₒ continuum" "⟨xᵢ²⟩ₜₕₑₒ dicretized" ""],color=["black" "green" "black"]) # Analytical expectation values for system
     # hline!(plt,[],color="green")
 
     display(plt)
-    # savefig(plt,"$(save_name).pdf")   # Save as pdf in folder "plots"
-    # savefig(plt,"$(save_name).png")   # Save as png in folder "plots"
+    savefig(plt,"$(save_name).pdf")   # Save as pdf in folder "plots"
+    savefig(plt,"$(save_name).png")   # Save as png in folder "plots"
 end

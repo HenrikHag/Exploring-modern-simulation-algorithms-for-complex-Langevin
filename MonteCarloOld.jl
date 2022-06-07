@@ -20,7 +20,7 @@ begin
     const meanf = "results/expfull.csv"
     
     # n_tau, m, ω
-    rng = MersenneTwister(11111)
+    rng = MersenneTwister(11111)  # Reseed the generator
     gaussianD = Normal(0.16, 1.5)
     save_date = findDate()
     # n=rand(d,1000)
@@ -58,78 +58,30 @@ end
 #
 
 
-
-
-
-
-#                               #
-# Defining a metropolis swipe   #
-#                               #
-"""Does a metroswipe by testing a change for each element,  
-and adds this new coord weighted by change in action."""
-function MetroSwipe(n_tau::Int64, m, ω, λ, a, h, idrate, rng, Path)
-    accept = 0
-    for i = 1:n_tau
-        x_new = Path[i] + h*2*(rand(rng)-1/2)
-        if rand(rng) < exp(-difActionAHO(n_tau,a,m,ω,λ,Path,i,x_new))
-            Path[i] = x_new
-            accept += 1/n_tau
-        end
-    end
-    # rand!(gaussianD, Path)
-    # randn!(rng, Path)
-    h *= accept / idrate
-    # println(h)
-    return Path, accept, h
-end
-
 # MetroSwipe(16,1,1,0,0.5,1,0.8,rng,zeros(16))
-
-
-
-"""
-Run small Simulation to estimate Autocorrelation at τ = 1  
-Assumes n_burn is large enough to overcome burn-in time
-"""
-function PreSim(n_tau, m, ω, λ, a, h, idrate, rng, Path, n_burn, n_skip, accept, runt)
-    h2 = copy(h)
-    Path2 = copy(Path)
-    accept2 = copy(accept)
-    for i=1:n_burn
-        Path, accept, h = MetroSwipe(n_tau, m, ω, λ, a, h, idrate, rng, Path)
-    end
-    configs = Matrix{Float64}(undef,runt,n_tau)
-    for i=1:runt
-        for ii=1:n_skip
-            Path, accept, h = MetroSwipe(n_tau, m, ω, λ, a, h, idrate, rng, Path)
-        end
-        configs[i,:] = Path
-    end
-    return 10*mean(AutoCorrR(configs)[:,2]), accept2, h2, Path2
-end
-
 
 
 """
 Simulation with Metropolis algorithm
 """
-function main(n_tau::Int,meanfname,obsfname,expfname,m,ω,a,λ)
+function main(n_tau::Integer,meanfname,obsfname,expfname,m,ω,a,λ)
     # Logic of program should go here
     # We want to print final expectation values
     # rng = MersenneTwister(11111)
     println("\nn_tau = ",n_tau,", m,ω = ", m,", ",ω)
-    Path = [500. for i=1:16]
+    Path = [0. for i=1:16]
     exp_x, exp_x2, exp_x0x1 = zeros(n_tau), zeros(n_tau), zeros(n_tau)
     sum1, sum2, sum3 = zeros(n_tau), zeros(n_tau), zeros(n_tau)
-    n_burn = 0
-    n_skip = 20000#42#50#n_tau/10#12
-    n_total = Int64(n_burn + 1 + (1+n_skip)*15000)#20000#200100
+    n_burn = 200
+    n_skip = 20 # Must be in range: [1,N] # Removes every n_skip-1
+    N = 15000 #20000#200100
+    n_total = n_burn + (n_skip)*N
     accept = 0
     idrate = 0.8
     h = 1
 
-    #                                   #
-    # Make autocorrelation negligible   #
+    #                                             #
+    # Make autocorrelation negligible (optional)  #
     while false
         runt = 200
         ato2, accept, h, Path = PreSim(n_tau, m, ω, λ, a, h, idrate, rng, Path, n_burn, n_skip, accept, runt)
@@ -154,32 +106,30 @@ function main(n_tau::Int,meanfname,obsfname,expfname,m,ω,a,λ)
     Randlist = []
 
     # Do n_total swipes, removing n_burn first swipes       #
+
+    for i = 1:n_burn
+        Path, accept, h = MetroSwipe(n_tau, m, ω, λ, a, h, idrate, rng, Path)
+    end
+    # Simulation
     a = @timed for i = 1:n_total
         Path, accept, h = MetroSwipe(n_tau, m, ω, λ, a, h, idrate, rng, Path)
-        if i > n_burn
-            if n_skip == 0 || (i-1-n_burn)%n_skip == 0
-                sum1, sum2, sum3 = MeasureObs(n_tau, sum1, sum2, sum3, Path)
-                append!(Randlist,accept)
-                itt += 1
-                # println("Measured ",itt)
-                exp_x, exp_x2, exp_x0x1 = E_Vals(n_tau,sum1,sum2,sum3,itt)
-                writee123tofile(n_tau,rfold,meanfname, exp_x, exp_x2, exp_x0x1, itt) # exp1, exp2, exp3  // Append each itt
-                writec123tofile(rfold,obsfname, Path, itt)             # curr1, curr2, curr3            // Append each itt
-                #filenamec3s3 = string("curr3sum3n",Int64(itt),".csv") # curr3, sum3                   // New file
-                #writec3s3tofile(rfold,filenamec3s3, sum3)
-                #filenames3e3 = string("sum3exp3n",Int64(itt),".csv")  # sum3, exp3                  // New file
-                #writes3e3tofile(rfold,filenames3e3, sum3, exp_x0x1)
-                writeeMean(rfold,expfname,exp_x,exp_x2,exp_x0x1,itt)   # ⟨exp1⟩, ⟨exp2⟩, ⟨exp3⟩      // Append each itt
-            end
+        if n_skip == 0 || (i-1)%n_skip == 0
+            sum1, sum2, sum3 = MeasureObs(n_tau, sum1, sum2, sum3, Path)
+            append!(Randlist,accept)
+            itt += 1
+            # println("Measured ",itt)
+            exp_x, exp_x2, exp_x0x1 = E_Vals(n_tau,sum1,sum2,sum3,itt)
+            writee123tofile(n_tau,rfold,meanfname, exp_x, exp_x2, exp_x0x1, itt) # exp1, exp2, exp3  // Append each itt
+            writec123tofile(rfold,obsfname, Path, itt)             # curr1, curr2, curr3            // Append each itt
+            #filenamec3s3 = string("curr3sum3n",Int64(itt),".csv") # curr3, sum3                   // New file
+            #writec3s3tofile(rfold,filenamec3s3, sum3)
+            #filenames3e3 = string("sum3exp3n",Int64(itt),".csv")  # sum3, exp3                  // New file
+            #writes3e3tofile(rfold,filenames3e3, sum3, exp_x0x1)
+            writeeMean(rfold,expfname,exp_x,exp_x2,exp_x0x1,itt)   # ⟨exp1⟩, ⟨exp2⟩, ⟨exp3⟩      // Append each itt
         end
     end
     println("Mean acceptrate = ", Statistics.mean(Randlist))
     println("Time: ",a.time)
-    if false
-        println("Jackknife analysis...")
-        twopointD = GetTwoPointData(string(rfold,meanfname))
-        return a.time, Jackknife1(twopointD)
-    end
     return a.time
 end
 
@@ -386,7 +336,7 @@ begin
     
 end
 
-plot(real.(AutoCorrR(path)))
+plot(AutoCorrR(path))
 
 path[1:4999-20]
 mean(path[1:5000])
@@ -398,12 +348,12 @@ mean(a)
 
 
 column = GetColumn(1,"results/measuredObs1.csv")
-plot(real.(AutoCorrR(column)))
+plot(AutoCorrR(column))
 
 
-plot(real.(AutoCorrR(GetColumn(2,"results/measuredObsG2.csv"))))
+plot(AutoCorrR(GetColumn(2,"results/measuredObsG2.csv")))
 AutoCorrR(rand(gaussianD,200))
 
-plot(real.(AutoCorrR(rand(gaussianD,2000))))
+plot(AutoCorrR(rand(gaussianD,2000)))
 
 

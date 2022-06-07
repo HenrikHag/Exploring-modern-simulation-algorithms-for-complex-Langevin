@@ -59,22 +59,19 @@ function Jackknife1(array1::AbstractVector)
     return [mean(array1),√(jfvm)]
 end
 function Jackknife1(array1::AbstractVector,binsize::Integer)
-    leng1 = length(array1)
-    sum1 = sum(array1)
-    N = Int(floor(Int,leng1/binsize)+1)
-    jf = Vector{Float64}(undef,N)
+    N_B = floor(Int64,length(array1)/binsize) # ommiting last not-full bin
+    leng2 = N_B*binsize
+    array2 = array1[1:leng2]
+    sum1 = sum(array2)
+    jf = Vector{Float64}(undef,N_B)
     fill!(jf,sum1)
-    for k = 1:N-1
-        for i = 1:binsize
-            jf[k] -= array1[(k-1)*binsize+i]
-        end
+    for k = 1:N_B
+        jf[k] -= sum(array2[(k-1)*binsize+1:k*binsize])
     end
-    jf = jf./(leng1-binsize)
-    jf = jf.-sum1/leng1
-    jf = jf.^2
+    jf = ((jf ./ (leng2 - binsize)) .- (sum1/leng2)).^2
     jfvm = mean(jf)
-    jfvm *= (length(array1)-1)
-    return [mean(array1),√(jfvm)]
+    jfvm *= (N_B - 1)
+    return [mean(array1),sqrt(jfvm)]
 end
 function Jackknife1(array1::AbstractVector,defIntACtimeBin::Bool)
     if defIntACtimeBin

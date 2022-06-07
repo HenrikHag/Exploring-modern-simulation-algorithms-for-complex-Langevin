@@ -4,6 +4,7 @@ using FFTW, Plots, Printf, Random, Statistics, DelimitedFiles
 export FFTW, Plots, Printf, Random, Statistics
 # export n_tau, idrate, h, m, ω, accept, sum1, sum2, sum3
 export HO_fullAction, HO_Action, AHO_Action, difActionHO, difActionAHO
+export MetroSwipe, PreSim
 export MeasureObs, E_Vals#, MeasureObs
 export printarray, printmatrix
 export writee123tofile, writec123tofile, writec3s3tofile, writes3e3tofile, writeeMean
@@ -32,14 +33,46 @@ export writee123tofile, writec123tofile, writec3s3tofile, writes3e3tofile, write
 # global sum3 = zeros(n_tau)  # Path_1 * Path_n
 
 
+#                               #
+# Defining a metropolis swipe   #
+#                               #
+"""Does a metroswipe by testing a change for each element,  
+and adds this new coord weighted by change in action."""
+function MetroSwipe(n_tau::Int64, m, ω, λ, a, h, idrate, rng, Path)
+    accept = 0
+    for i = 1:n_tau
+        x_new = Path[i] + h*2*(rand(rng)-1/2)
+        if rand(rng) < exp(-difActionAHO(n_tau,a,m,ω,λ,Path,i,x_new))
+            Path[i] = x_new
+            accept += 1/n_tau
+        end
+    end
+    if accept > 0
+        h *= accept / idrate
+    end
+    return Path, accept, h
+end
 
-
-"""Dimensionless mass
 """
-# global m = 1
-"""Dimensionless natural frequency
+Run small Simulation to estimate Autocorrelation at τ = 1  
+Assumes n_burn is large enough to overcome burn-in time
 """
-# global ω = 1
+function PreSim(n_tau, m, ω, λ, a, h, idrate, rng, Path, n_burn, n_skip, accept, runt)
+    h2 = copy(h)
+    Path2 = copy(Path)
+    accept2 = copy(accept)
+    for i=1:n_burn
+        Path, accept, h = MetroSwipe(n_tau, m, ω, λ, a, h, idrate, rng, Path)
+    end
+    configs = Matrix{Float64}(undef,runt,n_tau)
+    for i=1:runt
+        for ii=1:n_skip
+            Path, accept, h = MetroSwipe(n_tau, m, ω, λ, a, h, idrate, rng, Path)
+        end
+        configs[i,:] = Path
+    end
+    return 10*mean(AutoCorrR(configs)[:,2]), accept2, h2, Path2
+end
 
 
 #                       #

@@ -18,7 +18,7 @@ expf = "results/expfullHO_10_1.csv"
 #                                               #
 #               Plotting of data                #
 #                                               #
-
+PlotAC(measf,20)
 mean(GetData(measf,4,2)[:,1])
 mean(GetData(measf,4,1)[:,1].^2)
 
@@ -246,9 +246,9 @@ Exp_x2(16,0.95,1,1)
 
 begin   # ⟨xᵢ⟩, ⟨xᵢ²⟩
     save_name = "$(save_folder)$(save_date)_M_expect_x_x2"
-    a1 = Jackknife1(GetData(measf,4,1))
-    plot(a1[:,1],yerr=a1[:,2],legend=false)
-    a2 = Jackknife1(GetData(measf,4,1).^2)
+    a1 = Jackknife1(GetData(measf,4,1),true)
+    plot(a1[:,1],yerr=a1[:,2],legend=false,xlabel="O(τ)",ylabel="⟨O⟩")
+    a2 = Jackknife1(GetData(measf,4,1).^2,true)
     plot!(a2[:,1],yerr=a2[:,2])
     plt = hline!([Exp_x2e(16,0.5,1,1),0])
     display(plt)
