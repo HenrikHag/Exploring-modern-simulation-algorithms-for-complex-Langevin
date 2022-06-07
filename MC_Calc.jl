@@ -13,6 +13,7 @@ end
 # 
 measf = "results/measuredObsHO_1_β8_16.csv"#"results/measuredObsB100S0_7.csv"
 measf = "results/22.05.24_M_β8_16_fullAC_measuredObs.csv"
+measf = "saved_results/22.06.07_M_shortSim_obs.csv"
 expf = "results/expfullHO_10_1.csv"
 
 #                                               #
@@ -216,13 +217,13 @@ end
 # plot(expxDatawErr[:,1],yerr=expxDatawErr[:,2])
 
 begin   # ⟨x₁⟩
-    save_name = "$(save_folder)$(save_date)_M_badIC_expect_x_1"
+    save_name = "$(save_folder)$(save_date)_M_shortSim"
     a1=[]
     a = GetData(measf,4,1)[1:400,1]
     for i = 1:length(a)
         append!(a1,mean(a[1:i]))
     end
-    scatter(a)
+    scatter(a,xlabel="t",ylabel="⟨x⟩")
     plt = plot!(a1,width=4)
     display(plt)
     savefig(plt,"$(save_name).pdf")   # Save as pdf in folder "plots"
@@ -230,13 +231,13 @@ begin   # ⟨x₁⟩
 end
 
 begin   # ⟨x₁²⟩
-    save_name = "$(save_folder)$(save_date)_M_expect_x2_1"
+    save_name = "$(save_folder)$(save_date)_M_shortSim"
     a1=[]
-    a = GetData(measf,4,1)[1:4000,1].^2
+    a = GetData(measf,4,1)[1:400,1].^2
     for i = 1:length(a)
         append!(a1,mean(a[1:i]))
     end
-    scatter(a)
+    scatter(a,xlabel="t",ylabel="⟨x²⟩")
     plt = plot!(a1,width=4)
     display(plt)
     savefig(plt,"$(save_name).pdf")   # Save as pdf in folder "plots"

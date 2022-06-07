@@ -33,7 +33,7 @@ begin   # ⟨x₁⟩
     for i = 1:length(a)
         append!(a1,mean(a[1:i]))
     end
-    scatter(a)
+    scatter(a,xlabel="t",ylabel="⟨x⟩")
     plt = plot!(a1,width=4)
     display(plt)
     # savefig(plt,"$(save_name).pdf")   # Save as pdf in folder "plots"
@@ -48,7 +48,7 @@ begin   # ⟨x₁²⟩
     for i = 1:length(a)
         append!(a1,mean(a[1:i]))
     end
-    plt = scatter(a)
+    plt = scatter(a,xlabel="t",ylabel="⟨x²⟩")
     plot!(plt,a1,width=4)
     display(plt)
     # savefig(plt,"$(save_name).pdf")   # Save as pdf in folder "plots"

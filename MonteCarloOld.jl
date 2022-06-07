@@ -22,12 +22,12 @@ begin
     # n_tau, m, ω
     rng = MersenneTwister(11111)  # Reseed the generator
     gaussianD = Normal(0.16, 1.5)
+    save_path = "results/"
     save_date = findDate()
+    save_pre = "$(save_path)$(save_date)_M_"
     # n=rand(d,1000)
 end
 
-# printarray([1.1,-1.02,1.50,-0.4])
-# printarray([-1.02,1.50,-0.4,1.1])
 
 ##############################################################
 # 
@@ -60,78 +60,15 @@ end
 
 # MetroSwipe(16,1,1,0,0.5,1,0.8,rng,zeros(16))
 
+#########################
+# Metropolis Simulation #
+#########################
 
-"""
-Simulation with Metropolis algorithm
-"""
-function main(n_tau::Integer,meanfname,obsfname,expfname,m,ω,a,λ)
-    # Logic of program should go here
-    # We want to print final expectation values
-    # rng = MersenneTwister(11111)
-    println("\nn_tau = ",n_tau,", m,ω = ", m,", ",ω)
-    Path = [0. for i=1:16]
-    exp_x, exp_x2, exp_x0x1 = zeros(n_tau), zeros(n_tau), zeros(n_tau)
-    sum1, sum2, sum3 = zeros(n_tau), zeros(n_tau), zeros(n_tau)
-    n_burn = 200
-    n_skip = 20 # Must be in range: [1,N] # Removes every n_skip-1
-    N = 15000 #20000#200100
-    n_total = n_burn + (n_skip)*N
-    accept = 0
-    idrate = 0.8
-    h = 1
+phys_param = getAHO_M_param(16,8,1,1,0)
+sim_param = getSim_M_param(400,100,20,0.8,rng)
+MetropolisSim(phys_param, sim_param, save_pre, "shortSim")
 
-    #                                             #
-    # Make autocorrelation negligible (optional)  #
-    while false
-        runt = 200
-        ato2, accept, h, Path = PreSim(n_tau, m, ω, λ, a, h, idrate, rng, Path, n_burn, n_skip, accept, runt)
-        if ato2 > 2
-            println("Autocorrelation after $(runt) runs show Aₒ(1)= $(ato2/10)")
-            println("Increasing n_skip from: $(n_skip) to $(round(n_skip*ato2))\n")
-            n_skip *= round(ato2)
-        else
-            println("Autocorrelation after $(runt) runs show Aₒ(1)= $(ato2/10)")
-            break
-        end
-    end
-
-    #                               #
-    # Prepare writing to file       #
-    rfold = "results/"
-    touch(string(rfold,meanfname))
-    touch(string(rfold,obsfname))
-    touch(string(rfold,expfname))
-    # show(IOContext(stdout, :limit => true),"text/plain",Path); println();
-    itt = 0
-    Randlist = []
-
-    # Do n_total swipes, removing n_burn first swipes       #
-
-    for i = 1:n_burn
-        Path, accept, h = MetroSwipe(n_tau, m, ω, λ, a, h, idrate, rng, Path)
-    end
-    # Simulation
-    a = @timed for i = 1:n_total
-        Path, accept, h = MetroSwipe(n_tau, m, ω, λ, a, h, idrate, rng, Path)
-        if n_skip == 0 || (i-1)%n_skip == 0
-            sum1, sum2, sum3 = MeasureObs(n_tau, sum1, sum2, sum3, Path)
-            append!(Randlist,accept)
-            itt += 1
-            # println("Measured ",itt)
-            exp_x, exp_x2, exp_x0x1 = E_Vals(n_tau,sum1,sum2,sum3,itt)
-            writee123tofile(n_tau,rfold,meanfname, exp_x, exp_x2, exp_x0x1, itt) # exp1, exp2, exp3  // Append each itt
-            writec123tofile(rfold,obsfname, Path, itt)             # curr1, curr2, curr3            // Append each itt
-            #filenamec3s3 = string("curr3sum3n",Int64(itt),".csv") # curr3, sum3                   // New file
-            #writec3s3tofile(rfold,filenamec3s3, sum3)
-            #filenames3e3 = string("sum3exp3n",Int64(itt),".csv")  # sum3, exp3                  // New file
-            #writes3e3tofile(rfold,filenames3e3, sum3, exp_x0x1)
-            writeeMean(rfold,expfname,exp_x,exp_x2,exp_x0x1,itt)   # ⟨exp1⟩, ⟨exp2⟩, ⟨exp3⟩      // Append each itt
-        end
-    end
-    println("Mean acceptrate = ", Statistics.mean(Randlist))
-    println("Time: ",a.time)
-    return a.time
-end
+PlotAC("$(save_pre)shortSim_obs.csv")
 
 ####################### main end ##########################################
 
@@ -357,3 +294,6 @@ AutoCorrR(rand(gaussianD,200))
 plot(AutoCorrR(rand(gaussianD,2000)))
 
 
+
+# printarray([1.1,-1.02,1.50,-0.4])
+# printarray([-1.02,1.50,-0.4,1.1])
