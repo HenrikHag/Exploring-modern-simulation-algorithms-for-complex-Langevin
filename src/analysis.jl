@@ -405,9 +405,10 @@ end
 #            Effective mass             #
 #                                       #
 """
-Calculates the effective mass from a two-point correlation function
+Calculates the effective mass from data using the two-point correlation function
 """
 function EffM(array1::AbstractVector)
+    array2 = TPCF(array1)
     effm = Vector{Float64}(undef,length(array1)-2)
     for i=1:length(array1)-2
         effm[i] = 0.5*log10(array1[i]/array1[i+2])
@@ -420,9 +421,10 @@ function EffM(array1::AbstractMatrix)
     for i=1:length(array1[:,1])-2
         efm = 1/2*log10(array1[i,1]/array1[i+2,1])
         effm[i,1] = efm
+        # Test if out of bounds error occurs by too large errors
         effm[i,2] = max(
             1/2*log10((abs(array1[i,1])+array1[i,2])/(abs(array1[i+2,1])-array1[i+2,2]))-efm,
-            efm-1/2*log10((abs(array1[i-1,1])-array1[i-1,2])/(abs(array1[i+1,1])+array1[i+1,2]))
+            efm-1/2*log10((abs(array1[i,1])-array1[i,2])/(abs(array1[i+2,1])+array1[i+2,2]))
             )
         # println(1/2*log10((abs(array1[i-1,1])+array1[i-1,2])/(abs(array1[3,2])-array1[3,2]))-1/2*log10(array1[1,1]/array1[3,1]))
         # effm[i-1,2] = (abs(array1[i-1,1])-array1[i-1,2])/(abs(array1[i+1,2])+array1[i+1,2])-effm[i-1,1]#1/2*log10()
@@ -654,6 +656,16 @@ function PlotTPCF(matrix1::AbstractMatrix,logplot=true)
     # plot!(tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩")
     return tpcr
 end
+function PlotTPCF(matrix1::AbstractMatrix,FirstN::Integer,logplot=true)
+    tpcr = TPCF(transpose(matrix1))[1:FirstN,:]
+    if logplot
+        display(plot([0:length(tpcr[:,1])-1],tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,label="⟨x₍ᵢ₊ₓ₎xᵢ⟩",xlabel="Δτ",ylabel="G(Δτ)"))
+    else
+        display(plot([0:length(tpcr[:,1])-1],tpcr[:,1],yerr=tpcr[:,2], label="⟨x₍ᵢ₊ⱼ₎xᵢ⟩ᵢ",xlabel="Δτ",ylabel="G(Δτ)"))
+    end
+    # plot!(tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩")
+    return tpcr
+end
 function PlotTPCF(matrix1::AbstractMatrix,Jackknife::Bool,logplot=true)
     tpcr = TPCF(transpose(matrix1),Jackknife)
     if logplot
@@ -665,6 +677,16 @@ function PlotTPCF(matrix1::AbstractMatrix,Jackknife::Bool,logplot=true)
 end
 function PlotTPCF(filename::AbstractString,logplot=true)
     tpcr = Err1(GetTwoPointData(filename))
+    if logplot
+        display(plot([0:length(tpcr[:,1])-1],tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,label="⟨x₍ᵢ₊ₓ₎xᵢ⟩",xlabel="Δτ",ylabel="G(Δτ)"))
+    else
+        display(plot([0:length(tpcr[:,1])-1],tpcr[:,1],yerr=tpcr[:,2], label="⟨x₍ᵢ₊ⱼ₎xᵢ⟩ᵢ",xlabel="Δτ",ylabel="G(Δτ)"))
+    end
+    # plot!(tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,title="Two-Point Correlation", label="⟨x₍ᵢ₊ₓ₎xᵢ⟩")
+    return tpcr
+end
+function PlotTPCF(filename::AbstractString,FirstN::Integer,logplot=true)
+    tpcr = Err1(GetTwoPointData(filename))[1:FirstN,:]
     if logplot
         display(plot([0:length(tpcr[:,1])-1],tpcr[:,1],yerr=tpcr[:,2],yrange=[1.4*10^-3,10^2],yaxis=:log,label="⟨x₍ᵢ₊ₓ₎xᵢ⟩",xlabel="Δτ",ylabel="G(Δτ)"))
     else
@@ -695,10 +717,18 @@ Plots the expected TPCF for a system
 function PlotTPCFe(a,m,ω,n_tau)
     plot([0:n_tau-1],TPCFe(a,m,ω,n_tau),label="TPC_exp")
 end
+function PlotTPCFe(a,m,ω,n_tau,FirstN::Integer)
+    plot([0:FirstN-1],TPCFe(a,m,ω,n_tau)[1:FirstN],label="TPC_exp")
+end
 function PlotTPCFe(param)
     n_tau, a, m, μ = param.n_tau, param.a, param.m, param.μ
     ω = sqrt((μ/m))
     plot([0:n_tau-1],TPCFe(a,m,ω,n_tau),label="TPC_exp")
+end
+function PlotTPCFe(param,FirstN::Integer)
+n_tau, a, m, μ = param.n_tau, param.a, param.m, param.μ
+ω = sqrt((μ/m))
+plot([0:FirstN-1],TPCFe(a,m,ω,n_tau)[1:FirstN],label="TPC_exp")
 end
 
 """
@@ -707,10 +737,18 @@ Plots the expected TPCF for a system, appending to previous plot
 function PlotTPCFe!(a,m,ω,n_tau)
     plot!([0:n_tau-1],TPCFe(a,m,ω,n_tau),label="TPC_exp",linewidth=1)
 end
+function PlotTPCFe!(a,m,ω,n_tau,FirstN::Integer)
+    plot!([0:FirstN-1],TPCFe(a,m,ω,n_tau)[1:FirstN],label="TPC_exp",linewidth=1)
+end
 function PlotTPCFe!(param)
     n_tau, a, m, μ = param.n_tau, param.a, param.m, param.μ
     ω = sqrt(μ/m)
     plot!([0:n_tau-1],TPCFe(a,m,ω,n_tau),label="TPC_exp")
+end
+function PlotTPCFe!(param,FirstN::Integer)
+    n_tau, a, m, μ = param.n_tau, param.a, param.m, param.μ
+    ω = sqrt(μ/m)
+    plot!([0:FirstN-1],TPCFe(a,m,ω,n_tau)[1:FirstN],label="TPC_exp")
 end
 
 # title!("title") to get title on plots
@@ -764,9 +802,21 @@ function PlotEffM(filename)
     #     effm[i-1,1] = log10(tpcr[i-1,1]/tpcr[i+1,1])
     # end
     # effm./2
-    display(plot(effm[:,1],yerr=effm[:,2],xlabel="Δτ",ylabel="EffM(Δτ)"))
+    display(plot(effm[:,1],yerr=effm[:,2],xlabel="Δτ",ylabel="mₑ(Δτ)"))
     return effm
 end
+function PlotEffM(filename,FirstN::Integer)
+    tpcr = Err1(GetTwoPointData(filename)[:,1:FirstN])
+    effm = EffM(tpcr)
+    # effm = Matrix{Float64}(undef,length(tpcr[:,1])-2,1)
+    # for i=2:length(tpcr[:,1])-1
+    #     effm[i-1,1] = log10(tpcr[i-1,1]/tpcr[i+1,1])
+    # end
+    # effm./2
+    display(plot(effm[:,1],yerr=effm[:,2],xlabel="Δτ",ylabel="mₑ(Δτ)"))
+    return effm
+end
+
 function PlotEffM(filename,Jackknife::Bool)
     if Jackknife
         tpcr = Jackknife1(GetTwoPointData(filename))
@@ -774,7 +824,7 @@ function PlotEffM(filename,Jackknife::Bool)
         tpcr = Err1(GetTwoPointData(filename))
     end
     effm = EffM(tpcr)
-    display(plot(effm[:,1],yerr=effm[:,2],xlabel="Δτ",ylabel="EffM(Δτ)"))
+    display(plot(effm[:,1],yerr=effm[:,2],xlabel="Δτ",ylabel="mₑ(Δτ)"))
     return effm
 end
 

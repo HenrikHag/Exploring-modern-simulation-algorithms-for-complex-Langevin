@@ -276,11 +276,12 @@ twopointD = GetTwoPointData("results/measuredObsHO_1_β8_16.csv")
 
 
 function Jackknifeold(array1::AbstractArray)
-    jf = [mean(array1[2:length(array1)])]
+    jf = Array{Float64}(undef,length(array1))
+    jf[1] = mean(array1[2:length(array1)])
     for i=2:length(array1)-1
-        append!(jf,mean(append!(array1[1:i-1],array1[(i+1):length(array1)])))
+        jf[i] = mean(append!(array1[1:i-1],array1[(i+1):length(array1)]))
     end
-    append!(jf,mean(array1[1:length(array1)-1]))
+    jf[length(array1)] = mean(array1[1:length(array1)-1])
     jf = jf.-mean(array1)
     jf = jf.^2
     jfvm = mean(jf)

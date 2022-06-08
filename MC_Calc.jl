@@ -16,6 +16,8 @@ measf = "results/22.05.24_M_β8_16_fullAC_measuredObs.csv"
 measf = "saved_results/22.06.07_M_shortSim_obs.csv"
 measf = "saved_results/22.06.07_M_shortSim_HighAC_obs.csv"
 measf = "results/22.06.07_M_midSim_HighAC_obs.csv"
+measf = "results/22.06.08_M_midSim_obs.csv"
+measf = "results/22.06.08_M_midSim_b120_obs.csv"
 expf = "results/expfullHO_10_1.csv"
 
 #                                               #
@@ -38,6 +40,10 @@ PlotAC(measf)
 savefig("$(save_folder)$(save_date)_M_b8_AC.pdf")
 savefig("$(save_folder)$(save_date)_M_b8_AC.png")
 
+#############################
+#   Two-Point correlation   #
+#############################
+
 PlotTPCF(measf)
 PlotTPCFe!(0.5,1,1,16)
 # title!("Two-Point Correlation")
@@ -46,6 +52,10 @@ savefig("$(save_folder)$(save_date)_M_b8_TPCF.png")
 
 TPCF(measf,true)[end,:]
 
+PlotEffM(measf,20)
+# title!("Effective mass")
+savefig("$(save_folder)$(save_date)_M_b8_EffM_Nt160.pdf")
+savefig("$(save_folder)$(save_date)_M_b8_EffM_Nt160.png")
 
 PlotAC("results/measuredObsB1.csv",100)
 dat1 = GetData("results/measuredObsB1.csv",4,1)
@@ -261,4 +271,25 @@ begin   # ⟨xᵢ⟩, ⟨xᵢ²⟩
     display(plt)
     savefig(plt,"$(save_name)_x_x2.pdf")   # Save as pdf in folder "plots"
     savefig(plt,"$(save_name)_x_x2.png")   # Save as png in folder "plots"
+end
+
+
+
+
+
+
+begin # TPCF
+    save_name = "$(save_folder)$(save_date)_M_shortSim"
+    plt = PlotTPCF(measf)
+    display(plt)
+    # savefig(plt,"$(save_name)_TPCF.pdf")   # Save as pdf in folder "plots"
+    # savefig(plt,"$(save_name)_TPCF.png")   # Save as p
+end
+
+begin # Effective mass
+    save_name = "$(save_folder)$(save_date)_M_shortSim"
+    plt = PlotEffM(measf)
+    display(plt)
+    # savefig(plt,"$(save_name)_EffM.pdf")   # Save as pdf in folder "plots"
+    # savefig(plt,"$(save_name)_EffM.png")   # Save as p
 end
