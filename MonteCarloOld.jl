@@ -64,10 +64,10 @@ end
 # Metropolis Simulation #
 #########################
 
-phys_param = getAHO_M_param(1200,120,1,1,0)
+phys_param = getAHO_M_param(16,8,1,1,0)
 a = phys_param.a
-sim_param = getSim_M_param(1000,round(Int64,3/a),round(Int64,3/a),0.8,rng)
-MetropolisSim(phys_param, sim_param, save_pre, "midSim_b120")
+sim_param = getSim_M_param(1000,200,20,0.8,rng)
+MetropolisSim(phys_param, sim_param, save_pre, "trash")
 
 PlotAC("$(save_pre)shortSim_obs.csv")
 

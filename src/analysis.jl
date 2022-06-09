@@ -350,7 +350,7 @@ end
 """
 Returns the TPCF  
 If argument is Vector, from vector  
-If argument is Matrix, from rows of Matrix  
+If argument is Matrix, from rows of Matrix, giving estimate of error of different columns  
 If argument is String, from rows of data in file  
 Optional: Bool for Jackknife
 """
@@ -416,15 +416,15 @@ function EffM(array1::AbstractVector)
     # display(plot(effm))
     return effm
 end
-function EffM(array1::AbstractMatrix)
-    effm = Matrix{Float64}(undef,length(array1[:,1])-2,2)
-    for i=1:length(array1[:,1])-2
-        efm = 1/2*log10(array1[i,1]/array1[i+2,1])
+function EffM(matrix1::AbstractMatrix)
+    effm = Matrix{Float64}(undef,length(matrix1[:,1])-2,2)
+    for i=1:length(matrix1[:,1])-2
+        efm = 1/2*log10(matrix1[i,1]/matrix1[i+2,1])
         effm[i,1] = efm
         # Test if out of bounds error occurs by too large errors
         effm[i,2] = max(
-            1/2*log10((abs(array1[i,1])+array1[i,2])/(abs(array1[i+2,1])-array1[i+2,2]))-efm,
-            efm-1/2*log10((abs(array1[i,1])-array1[i,2])/(abs(array1[i+2,1])+array1[i+2,2]))
+            1/2*log10((abs(matrix1[i,1])+matrix1[i,2])/(abs(matrix1[i+2,1])-matrix1[i+2,2]))-efm,
+            efm-1/2*log10((abs(matrix1[i,1])-matrix1[i,2])/(abs(matrix1[i+2,1])+matrix1[i+2,2]))
             )
         # println(1/2*log10((abs(array1[i-1,1])+array1[i-1,2])/(abs(array1[3,2])-array1[3,2]))-1/2*log10(array1[1,1]/array1[3,1]))
         # effm[i-1,2] = (abs(array1[i-1,1])-array1[i-1,2])/(abs(array1[i+1,2])+array1[i+1,2])-effm[i-1,1]#1/2*log10()
@@ -432,7 +432,49 @@ function EffM(array1::AbstractMatrix)
     # display(plot(effm[:,1],yerr=effm[:,2]))
     return effm
 end
-
+# function EffM(matrix1::AbstractMatrix)
+#     effm = Matrix{Float64}(undef,length(matrix1[:,1])-2,2)
+#     efm = Array{Float64}(undef,length(matrix1[1,:]))
+#     for i=1:length(matrix1[:,1])-2
+#         for ii = 1:length(matrix1[1,:])
+#             efm[ii] = 0.5*log10(matrix1[i,ii]/matrix1[i+2,ii])
+#         end
+#         effm[i,2] = Err1(efm)[2]
+#         # Test if out of bounds error occurs by too large errors
+#         # effm[i,2] = max(
+#             # 1/2*log10((abs(matrix1[i,1])+matrix1[i,2])/(abs(matrix1[i+2,1])-matrix1[i+2,2]))-efm,
+#             # efm-1/2*log10((abs(matrix1[i,1])-matrix1[i,2])/(abs(matrix1[i+2,1])+matrix1[i+2,2]))
+#             # )
+#         # println(1/2*log10((abs(array1[i-1,1])+array1[i-1,2])/(abs(array1[3,2])-array1[3,2]))-1/2*log10(array1[1,1]/array1[3,1]))
+#         # effm[i-1,2] = (abs(array1[i-1,1])-array1[i-1,2])/(abs(array1[i+1,2])+array1[i+1,2])-effm[i-1,1]#1/2*log10()
+#     end
+#     effm[:,1] .= Err1(transpose(matrix1))[length(effm[:,1]),1]
+#     # display(plot(effm[:,1],yerr=effm[:,2]))
+#     return effm
+# end
+# function EffM(matrix1::AbstractMatrix,Jackknife::Bool)
+#     effm = Matrix{Float64}(undef,length(matrix1[:,1])-2,2)
+#     efm = Array{Float64}(undef,length(matrix[1,:]))
+#     for i=1:length(matrix1[:,1])-2
+#         for ii = 1:length(matrix1[1,:])
+#             efm[i] = 1/2*log10(matrix1[i,ii]/matrix1[i+2,ii])
+#         end
+#         if Jackknife
+#             effm[i,:] = Jackknife1(efm[i])
+#         else
+#             effm[i,:] = Err1(efm[i])
+#         end
+#         # Test if out of bounds error occurs by too large errors
+#         # effm[i,2] = max(
+#             # 1/2*log10((abs(matrix1[i,1])+matrix1[i,2])/(abs(matrix1[i+2,1])-matrix1[i+2,2]))-efm,
+#             # efm-1/2*log10((abs(matrix1[i,1])-matrix1[i,2])/(abs(matrix1[i+2,1])+matrix1[i+2,2]))
+#             # )
+#         # println(1/2*log10((abs(array1[i-1,1])+array1[i-1,2])/(abs(array1[3,2])-array1[3,2]))-1/2*log10(array1[1,1]/array1[3,1]))
+#         # effm[i-1,2] = (abs(array1[i-1,1])-array1[i-1,2])/(abs(array1[i+1,2])+array1[i+1,2])-effm[i-1,1]#1/2*log10()
+#     end
+#     # display(plot(effm[:,1],yerr=effm[:,2]))
+#     return effm
+# end
 
 
 
@@ -816,14 +858,39 @@ function PlotEffM(filename,FirstN::Integer)
     display(plot(effm[:,1],yerr=effm[:,2],xlabel="Δτ",ylabel="mₑ(Δτ)"))
     return effm
 end
+# """
+# Plots the Effective Mass from TPCF data from file
+# """
+# function PlotEffM(filename)
+#     tpcr = GetTwoPointData(filename)
+#     effm = EffM(tpcr)
+#     # effm = Matrix{Float64}(undef,length(tpcr[:,1])-2,1)
+#     # for i=2:length(tpcr[:,1])-1
+#     #     effm[i-1,1] = log10(tpcr[i-1,1]/tpcr[i+1,1])
+#     # end
+#     # effm./2
+#     display(plot(effm[:,1],yerr=effm[:,2],xlabel="Δτ",ylabel="mₑ(Δτ)"))
+#     return effm
+# end
+# function PlotEffM(filename,FirstN::Integer)
+#     tpcr = GetTwoPointData(filename)[:,1:FirstN]
+#     effm = EffM(tpcr)
+#     # effm = Matrix{Float64}(undef,length(tpcr[:,1])-2,1)
+#     # for i=2:length(tpcr[:,1])-1
+#     #     effm[i-1,1] = log10(tpcr[i-1,1]/tpcr[i+1,1])
+#     # end
+#     # effm./2
+#     display(plot(effm[:,1],yerr=effm[:,2],xlabel="Δτ",ylabel="mₑ(Δτ)"))
+#     return effm
+# end
 
 function PlotEffM(filename,Jackknife::Bool)
+    tpcr = GetTwoPointData(filename)
     if Jackknife
-        tpcr = Jackknife1(GetTwoPointData(filename))
+        effm = EffM(tpcr,Jackknife)
     else
-        tpcr = Err1(GetTwoPointData(filename))
+        effm = EffM(tpcr)
     end
-    effm = EffM(tpcr)
     display(plot(effm[:,1],yerr=effm[:,2],xlabel="Δτ",ylabel="mₑ(Δτ)"))
     return effm
 end
