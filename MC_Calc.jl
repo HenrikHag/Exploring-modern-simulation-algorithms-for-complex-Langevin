@@ -18,12 +18,28 @@ measf = "saved_results/22.06.07_M_shortSim_HighAC_obs.csv"
 measf = "results/22.06.07_M_midSim_HighAC_obs.csv"
 measf = "results/22.06.08_M_midSim_obs.csv"
 measf = "results/22.06.08_M_midSim_b120_obs.csv"
+measf = "results/22.06.10_M_longSim_100k_1skip_obs.csv"
+measf = "results/22.06.10_M_longSim_10k_1skip_obs.csv"
+measf = "results/22.06.10_M_longSim_10k_20skip_obs.csv"
+measf = "results/22.06.10_M_longSim_10k_40skip_obs.csv"
 expf = "results/expfullHO_10_1.csv"
 
 #                                               #
 #               Plotting of data                #
 #                                               #
-PlotAC(measf,20)
+PlotAC(measf,200)
+# PlotACsb(measf)
+data1 = GetData(measf,4,1)#[1:200,:]
+data1 = [1,2,3,4,5,6,7,8,9,10,9,8,7,6,5,4,3,2,1]
+@benchmark Autocorrelation_BySummation(data1)
+@benchmark AutoCorrR(data1)
+PlotAC_BySummation(data1,false)
+plot(StatsBase.autocor(data1,[i for i=0:length(data1)-1]))
+
+PlotAC_BySummation(data1,200)
+PlotAC(data1,false)
+
+
 mean(GetData(measf,4,2)[:,1])
 mean(GetData(measf,4,1)[:,1].^2)
 
@@ -35,27 +51,27 @@ mean(GetData(measf,4,1)[:,1].^2)
 # LastRowFromFile("results/measuredObs.csv")
 
 
-PlotAC(measf)
+PlotAC(measf,20)
 # title!("Autocorrelation")
-savefig("$(save_folder)$(save_date)_M_b8_AC.pdf")
-savefig("$(save_folder)$(save_date)_M_b8_AC.png")
+savefig("$(save_folder)$(save_date)_M_10k_40skip_20AC.pdf")
+savefig("$(save_folder)$(save_date)_M_10k_40skip_20AC.png")
 
 #############################
 #   Two-Point correlation   #
 #############################
 
-PlotTPCF(measf)
+PlotTPCF(measf,true,true)
 PlotTPCFe!(0.5,1,1,16)
 # title!("Two-Point Correlation")
-savefig("$(save_folder)$(save_date)_M_b8_TPCF.pdf")
-savefig("$(save_folder)$(save_date)_M_b8_TPCF.png")
+savefig("$(save_folder)$(save_date)_M_10k_40skip_TPCF.pdf")
+savefig("$(save_folder)$(save_date)_M_10k_40skip_TPCF.png")
 
 TPCF(measf,true)[end,:]
 
-PlotEffM(measf,20)
+PlotEffM(measf,16)
 # title!("Effective mass")
-savefig("$(save_folder)$(save_date)_M_b8_EffM_Nt160.pdf")
-savefig("$(save_folder)$(save_date)_M_b8_EffM_Nt160.png")
+savefig("$(save_folder)$(save_date)_M_10k_40skip_EffM.pdf")
+savefig("$(save_folder)$(save_date)_M_10k_40skip_EffM.png")
 
 PlotAC("results/measuredObsB1.csv",100)
 dat1 = GetData("results/measuredObsB1.csv",4,1)
@@ -229,7 +245,7 @@ end
 # plot(expxDatawErr[:,1],yerr=expxDatawErr[:,2])
 
 begin   # ⟨x₁⟩
-    save_name = "$(save_folder)$(save_date)_M_midSim_HighAC"
+    save_name = "$(save_folder)$(save_date)_M_longSim_10k_40skip"
     a1=[]
     a = GetData(measf,4,1)[1:1000,1]
     for i = 1:length(a)
@@ -244,7 +260,7 @@ begin   # ⟨x₁⟩
 end
 
 begin   # ⟨x₁²⟩
-    save_name = "$(save_folder)$(save_date)_M_midSim_HighAC"
+    save_name = "$(save_folder)$(save_date)_M_longSim_10k_40skip"
     a1=[]
     a = GetData(measf,4,1)[1:1000,1].^2
     for i = 1:length(a)
@@ -260,12 +276,12 @@ end
 Exp_x2(16,0.95,1,1)
 
 begin   # ⟨xᵢ⟩, ⟨xᵢ²⟩
-    save_name = "$(save_folder)$(save_date)_M_midSim_HighAC_err"
-    # a1 = Jackknife1(GetData(measf,4,1),true)
-    a1 = Err1(GetData(measf,4,1))
+    save_name = "$(save_folder)$(save_date)_M_longSim_10k_40skip_jk"
+    a1 = Jackknife1(GetData(measf,4,1),true)
+    # a1 = Err1(GetData(measf,4,1))
     plt = plot(a1[:,1],yerr=a1[:,2],legend=:right,xlabel="τ",ylabel="⟨O⟩",label="⟨x(τ)⟩")
-    # a2 = Jackknife1(GetData(measf,4,1).^2,true)
-    a2 = Err1(GetData(measf,4,1).^2)
+    a2 = Jackknife1(GetData(measf,4,1).^2,true)
+    # a2 = Err1(GetData(measf,4,1).^2)
     plot!(plt,a2[:,1],yerr=a2[:,2],label="⟨x²(τ)⟩")
     hline!(plt,[[Exp_x2e(16,0.5,1,1)],[0]],label=["⟨xᵢ²⟩ₜₕₑₒ continuum" ""],color=["black" "black"])
     display(plt)

@@ -60,7 +60,7 @@ begin
     for i=1:n_burn
         path1, accept, h = MetroSwipe(N_tau, m, ω, λ, a, h, idrate, rng, path1)
     end
-    vline([0],label=false,xlabel)
+    vline([0],label=false)
     scatter!([0 for i=1:N_tau],[i*a for i=1:N_tau],label=false,color="black")
     plot!(path1,[i*a for i=1:N_tau],label="X₀")
     path1, accept, h = MetroSwipe(N_tau, m, ω, λ, a, h, idrate, rng, path1)
@@ -71,7 +71,7 @@ begin
     end
     plot!(path1,[i*a for i=1:N_tau],label="X₂₀")
 end
-xlabel!("Real time t")
+xlabel!("x")
 ylabel!("Euclidean time τ")
 savefig("plots/$(findDate())_EuclideanTimeContourPath.pdf")
 savefig("plots/$(findDate())_EuclideanTimeContourPath.png")

@@ -231,17 +231,52 @@ end
 """
 returns autocorrelation of a vector or matrix by slow summation
 """
-function Autocorrelation_BySummation(arrayC::AbstractArray)
+function Autocorrelation_BySummation(arrayC::AbstractVector)
     a = copy(arrayC)
+    a = a .- mean(a)
     append!(a,zeros(length(arrayC)))
     acc = [sum(a.*circshift(a,-i)) for i=0:length(arrayC)-1]
     var = acc[1]
     return acc./var
 end
+function Autocorrelation_BySummation(arrayC::AbstractVector,Nfirst::Integer)
+    a = copy(arrayC)
+    a = a .- mean(a)
+    append!(a,zeros(length(arrayC)))
+    acc = [sum(a.*circshift(a,-i)) for i=0:Nfirst-1]
+    var = acc[1]
+    return acc./var
+end
+function Autocorrelation_BySummation(arrayC::AbstractVector,norm::Bool)
+    a = copy(arrayC)
+    a = a .- mean(a)
+    println(mean(a))
+    append!(a,zeros(length(arrayC)))
+    acc = [sum(a.*circshift(a,-i)) for i=0:length(arrayC)-1]
+    if norm
+        var = acc[1]
+        return acc./var
+    end
+    return acc
+end
 function Autocorrelation_BySummation(matrixC::AbstractMatrix)
     CorrD = Matrix{Float64}(undef,length(matrixC[1,:]),length(matrixC[:,1]))
     for i=1:length(matrixC[1,:])
         CorrD[i,:] = Autocorrelation_BySummation(matrixC[:,i])
+    end
+    return CorrD
+end
+function Autocorrelation_BySummation(matrixC::AbstractMatrix,Nfirst::Integer)
+    CorrD = Matrix{Float64}(undef,length(matrixC[1,:]),length(matrixC[:,1]))
+    for i=1:length(matrixC[1,:])
+        CorrD[i,:] = Autocorrelation_BySummation(matrixC[:,i],Nfirst)
+    end
+    return CorrD
+end
+function Autocorrelation_BySummation(matrixC::AbstractMatrix,norm::Bool)
+    CorrD = Matrix{Float64}(undef,length(matrixC[1,:]),length(matrixC[:,1]))
+    for i=1:length(matrixC[1,:])
+        CorrD[i,:] = Autocorrelation_BySummation(matrixC[:,i],norm)
     end
     return CorrD
 end
@@ -254,6 +289,28 @@ function PlotAC_BySummation(matrix1::AbstractMatrix)
     jkf1 = Jackknife1(autocorrdata)
     plot(jkf1[:,1],yerr=jkf1[:,2],xlabel="Δt",ylabel="Aₒ(Δt)")
 end
+function PlotAC_BySummation(matrix1::AbstractMatrix,Nfirst::Integer)
+    autocorrdata = Autocorrelation_BySummation(matrix1,Nfirst)
+    jkf1 = Jackknife1(autocorrdata)
+    plot(jkf1[:,1],yerr=jkf1[:,2],xlabel="Δt",ylabel="Aₒ(Δt)")
+end
+function PlotAC_BySummation(matrix1::AbstractMatrix,norm::Bool)
+    autocorrdata = Autocorrelation_BySummation(matrix1,norm)
+    jkf1 = Jackknife1(autocorrdata)
+    plot(jkf1[:,1],yerr=jkf1[:,2],xlabel="Δt",ylabel="Aₒ(Δt)")
+end
+function PlotAC_BySummation(vector1::AbstractVector)
+    autocorrdata = Autocorrelation_BySummation(vector1)
+    plot(autocorrdata,xlabel="Δt",ylabel="Aₒ(Δt)")
+end
+function PlotAC_BySummation(vector1::AbstractVector,Nfirst::Integer)
+    autocorrdata = Autocorrelation_BySummation(vector1,Nfirst)
+    plot(autocorrdata,xlabel="Δt",ylabel="Aₒ(Δt)")
+end
+function PlotAC_BySummation(vector1::AbstractVector,norm::Bool)
+    autocorrdata = Autocorrelation_BySummation(vector1,norm)
+    plot(autocorrdata,xlabel="Δt",ylabel="Aₒ(Δt)")
+end
 
 """
 returns real part of FFT AutoCorrelation of arrayC.  
@@ -261,50 +318,58 @@ returns a matrix of correlations → if matrix of configs ↓ is passed.
 `[t_MC,xᵢ] → [xᵢ,AC(t_MC)]`
 """
 function AutoCorrR(arrayC::AbstractArray)
-    mean1 = mean(arrayC)
-    arrayCm = arrayC .- mean1
+    arrayCm = copy(arrayC) .- mean(arrayC)
+    arrayCm = append!(arrayCm,[0 for i = 0:length(arrayC)]) # Padding
     autoCorr = fft(arrayCm)
     arrayCm = (abs.(autoCorr)).^2
-    autoCorr = ifft(arrayCm)
+    autoCorr = real.(ifft(arrayCm))[1:length(arrayC)]
     e1 = autoCorr[1]
-    return real.((autoCorr)./e1)
+    return autoCorr./e1
 end
 function AutoCorrR(arrayC::AbstractArray,norm::Bool)
-    mean1 = mean(arrayC)
-    arrayCm = arrayC .- mean1
+    arrayCm = copy(arrayC) .- mean(arrayC)
+    arrayCm = append!(arrayCm,[0 for i = 0:length(arrayC)]) # Padding
     autoCorr = fft(arrayCm)
     arrayCm = (abs.(autoCorr)).^2
-    autoCorr = ifft(arrayCm)
+    autoCorr = real.(ifft(arrayCm))[1:length(arrayC)]
     e1 = autoCorr[1]
     if !norm
-        return real.(autoCorr)
+        return autoCorr
     end
-    return real.((autoCorr)./e1)
+    return autoCorr./e1
+end
+function AutoCorrR(arrayC::AbstractArray,norm::Bool,padded::Bool)
+    arrayCm = copy(arrayC) .- mean(arrayC)
+    if padded
+        arrayCm = append!(arrayCm,[0 for i=0:length(arrayC)]) # Padding
+    end
+    autoCorr = fft(arrayCm)
+    arrayCm = (abs.(autoCorr)).^2
+    autoCorr = real.(ifft(arrayCm))[1:length(arrayC)]
+    if !norm
+        return autoCorr
+    end
+    e1 = autoCorr[1]
+    return autoCorr./e1
 end
 function AutoCorrR(matrixC::AbstractMatrix)
-    CorrD=Matrix{Float64}(undef,length(matrixC[1,:]),length(matrixC[:,1]))
-    for i=1:length(matrixC[1,:])
-        CorrD[i,:]=real.(AutoCorrR(append!(matrixC[:,i],[0 for i=0:length(matrixC[:,1])])))[1:length(matrixC[:,1])]
+    CorrD = Matrix{Float64}(undef,length(matrixC[1,:]),length(matrixC[:,1]))
+    for i = 1:length(matrixC[1,:])
+        CorrD[i,:] = AutoCorrR(matrixC[:,i])
     end
     return CorrD
 end
 function AutoCorrR(matrixC::AbstractMatrix,norm::Bool)
-    CorrD=Matrix{Float64}(undef,length(matrixC[1,:]),length(matrixC[:,1]))
-    for i=1:length(matrixC[1,:])
-        CorrD[i,:]=real.(AutoCorrR(append!(matrixC[:,i],[0 for i=0:length(matrixC[:,1])]),norm::Bool))[1:length(matrixC[:,1])]
+    CorrD = Matrix{Float64}(undef,length(matrixC[1,:]),length(matrixC[:,1]))
+    for i = 1:length(matrixC[1,:])
+        CorrD[i,:] = AutoCorrR(matrixC[:,i],norm)
     end
     return CorrD
 end
 function AutoCorrR(matrixC::AbstractMatrix,norm::Bool,padded::Bool)
-    CorrD=Matrix{Float64}(undef,length(matrixC[1,:]),length(matrixC[:,1]))
-    if !padded
-        for i=1:length(matrixC[1,:])
-            CorrD[i,:]=real.(AutoCorrR(matrixC[:,i],norm::Bool))[1:length(matrixC[:,1])]
-        end
-        return CorrD
-    end
-    for i=1:length(matrixC[1,:])
-        CorrD[i,:]=real.(AutoCorrR(append!(matrixC[:,i],[0 for i=0:length(matrixC[:,1])]),norm::Bool))[1:length(matrixC[:,1])]
+    CorrD = Matrix{Float64}(undef,length(matrixC[1,:]),length(matrixC[:,1]))
+    for i = 1:length(matrixC[1,:])
+        CorrD[i,:] = AutoCorrR(matrixC[:,i],norm,padded)
     end
     return CorrD
 end
@@ -360,7 +425,7 @@ function TPCF(filename::String)
 end
 function TPCF(filename::String,Jackknife::Bool)
     if Jackknife
-        tpcr = Jackknife1(GetTwoPointData(filename))
+        tpcr = Jackknife1(GetTwoPointData(filename),true)
     else
         tpcr = Err1(GetTwoPointData(filename))
     end
@@ -386,7 +451,7 @@ function TPCF(matrix1::AbstractMatrix,Jackknife::Bool)
         for i = 1:length(matrix1[1,:])
             tpcr[i,:] = TPCF(matrix1[:,i])
         end
-        return Jackknife1(tpcr)
+        return Jackknife1(tpcr,true)
     end
     return TPCF(matrix1)
 end
@@ -511,16 +576,16 @@ end
 """
 Plots AutoCorrelation from file, matrix or vector  
 Optional:  
-fullLength; plots only for first 200 in τ if false  
-leng; specify the number to plot in τ
+norm; plots the unnormalized autocorrelation  
+leng; specify the number to plot in t
 """
 function PlotAC(filename::AbstractString)
     data1 = GetData(filename,4,1)
     PlotAC(data1)
 end
-function PlotAC(filename::AbstractString,fullLength::Bool)
+function PlotAC(filename::AbstractString,norm::Bool)
     data1 = GetData(filename,4,1)
-    PlotAC(data1,fullLength)
+    PlotAC(data1,norm)
 end
 function PlotAC(filename::AbstractString,leng)
     data1 = GetData(filename,4,1)
@@ -530,13 +595,8 @@ function PlotAC(matrix1::AbstractMatrix)
     jkf1 = Jackknife1(AutoCorrR(matrix1))
     plot(jkf1[:,1],yerr=jkf1[:,2],xlabel="Δt",ylabel="Aₒ(Δt)")
 end
-function PlotAC(matrix1::AbstractMatrix,fullLength::Bool)
-    if fullLength
-        autocorrdata = AutoCorrR(matrix1)
-    else
-        leng = 200
-        autocorrdata = AutoCorrR(matrix1)[:,1:leng]
-    end
+function PlotAC(matrix1::AbstractMatrix,norm::Bool)
+    autocorrdata = AutoCorrR(matrix1,norm)
     jkf1 = Jackknife1(autocorrdata)
     plot(jkf1[:,1],yerr=jkf1[:,2],xlabel="Δt",ylabel="Aₒ(Δt)")
 end
@@ -551,13 +611,8 @@ end
 function PlotAC(vector1::AbstractVector)
     plot(AutoCorrR(vector1),xlabel="Δt",ylabel="Aₒ(Δt)")
 end
-function PlotAC(vector1::AbstractVector,fullLength::Bool)
-    if fullLength
-        autocorrdata = AutoCorrR(vector1)
-    else
-        leng = 200
-        autocorrdata = AutoCorrR(vector1)[:,1:leng]
-    end
+function PlotAC(vector1::AbstractVector,norm::Bool)
+    autocorrdata = AutoCorrR(vector1,norm)
     plot(autocorrdata,xlabel="Δt",ylabel="Aₒ(Δt)")
 end
 function PlotAC(vector1::AbstractVector,leng)
@@ -883,17 +938,16 @@ end
 #     display(plot(effm[:,1],yerr=effm[:,2],xlabel="Δτ",ylabel="mₑ(Δτ)"))
 #     return effm
 # end
-
-function PlotEffM(filename,Jackknife::Bool)
-    tpcr = GetTwoPointData(filename)
-    if Jackknife
-        effm = EffM(tpcr,Jackknife)
-    else
-        effm = EffM(tpcr)
-    end
-    display(plot(effm[:,1],yerr=effm[:,2],xlabel="Δτ",ylabel="mₑ(Δτ)"))
-    return effm
-end
+# function PlotEffM(filename,Jackknife::Bool)
+#     tpcr = GetTwoPointData(filename)
+#     if Jackknife
+#         effm = EffM(tpcr,Jackknife)
+#     else
+#         effm = EffM(tpcr)
+#     end
+#     display(plot(effm[:,1],yerr=effm[:,2],xlabel="Δτ",ylabel="mₑ(Δτ)"))
+#     return effm
+# end
 
 
 
