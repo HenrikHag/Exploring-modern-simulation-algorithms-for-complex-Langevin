@@ -24,6 +24,20 @@ measf = "results/22.06.10_M_longSim_10k_20skip_obs.csv"
 measf = "results/22.06.10_M_longSim_10k_40skip_obs.csv"
 expf = "results/expfullHO_10_1.csv"
 
+# ⟨x⟩ and ⟨x²⟩
+measf = "results/22.06.12_M_longSim_1M_1skip_obs.csv"
+measf = "results/22.06.12_M_longSim_10k_40skip_obs.csv"
+
+# PDD
+measf = "results/22.06.12_M_longSim_1M_160skip_b2_obs.csv"
+measf = "results/22.06.12_M_longSim_1M_40skip_obs.csv"
+measf = "results/22.06.12_M_longSim_1M_40skip_b32_obs.csv"
+
+# Plot for enough samples in results and Jackknife
+# PDD for β = 2 and 8
+
+
+
 #                                               #
 #               Plotting of data                #
 #                                               #
@@ -51,10 +65,10 @@ mean(GetData(measf,4,1)[:,1].^2)
 # LastRowFromFile("results/measuredObs.csv")
 
 
-PlotAC(measf,20)
+PlotAC(measf,300)
 # title!("Autocorrelation")
-savefig("$(save_folder)$(save_date)_M_10k_40skip_20AC.pdf")
-savefig("$(save_folder)$(save_date)_M_10k_40skip_20AC.png")
+savefig("$(save_folder)$(save_date)_M_1M_1skip_300AC.pdf")
+savefig("$(save_folder)$(save_date)_M_1M_1skip_300AC.png")
 
 #############################
 #   Two-Point correlation   #
@@ -112,10 +126,13 @@ plot(autocorrdataJK2[:,1],yerr=autocorrdataJK2[:,2],title="AutoCorr by padded da
 ########################################
 
 begin
-    PlotProbDD(measf,0.1)
-    PlotProbDDe(1,1,1,2)
+    save_name = "$(save_folder)$(save_date)_M_1M_40skip_b32"
+    plt = PlotProbDD(measf)
+    PlotProbDDe!(plt,1,1,1,4)
+    display(plt)
+    savefig(plt,"$(save_name)_PDD.pdf")
+    savefig(plt,"$(save_name)_PDD.png")
 end
-savefig("plots/22.04.27_M_pdd10_b16.pdf")
 
 arr1 = GetColumn(2+16:2*16+1,measf)
 arr1 = reshape(arr1,:)
@@ -276,14 +293,15 @@ end
 Exp_x2(16,0.95,1,1)
 
 begin   # ⟨xᵢ⟩, ⟨xᵢ²⟩
-    save_name = "$(save_folder)$(save_date)_M_longSim_10k_40skip_jk"
-    a1 = Jackknife1(GetData(measf,4,1),true)
-    # a1 = Err1(GetData(measf,4,1))
+    save_name = "$(save_folder)$(save_date)_M_longSim_10k_40skip_er"
+    data1 = GetData(measf,4,1)
+    # a1 = Jackknife1(data1,true)
+    a1 = Err1(data1)
     plt = plot(a1[:,1],yerr=a1[:,2],legend=:right,xlabel="τ",ylabel="⟨O⟩",label="⟨x(τ)⟩")
-    a2 = Jackknife1(GetData(measf,4,1).^2,true)
-    # a2 = Err1(GetData(measf,4,1).^2)
+    # a2 = Jackknife1(data1.^2,true)
+    a2 = Err1(data1.^2)
     plot!(plt,a2[:,1],yerr=a2[:,2],label="⟨x²(τ)⟩")
-    hline!(plt,[[Exp_x2e(16,0.5,1,1)],[0]],label=["⟨xᵢ²⟩ₜₕₑₒ continuum" ""],color=["black" "black"])
+    hline!(plt,[[Exp_x2e(16,0.5,1,1)],[Exp_x2(16,0.5,1,1)],[0]],label=["⟨xᵢ²⟩ₜₕₑₒ continuum" "⟨xᵢ²⟩ₜₕₑₒ discretized" ""],color=["black" "green" "black"])
     display(plt)
     savefig(plt,"$(save_name)_x_x2.pdf")   # Save as pdf in folder "plots"
     savefig(plt,"$(save_name)_x_x2.png")   # Save as png in folder "plots"
@@ -295,7 +313,7 @@ end
 
 
 begin # TPCF
-    save_name = "$(save_folder)$(save_date)_M_shortSim"
+    save_name = "$(save_folder)$(save_date)_M_1M_40skip_b8"
     plt = PlotTPCF(measf)
     display(plt)
     # savefig(plt,"$(save_name)_TPCF.pdf")   # Save as pdf in folder "plots"

@@ -4,7 +4,7 @@ export Err1, Jackknife1
 export LastRowFromFile, GetColumn, GetData, GetTwoPointData, GetTP1data, GetExpXData, GetLastMean
 export AutoCorrR, ACIntegrated, TPCF, TPCFe, EffM, Exp_x2e, Exp_x2, Autocorrelation_BySummation
 export PlotAC, PlotACsb, PlotTPCF, PlotTPCFe, PlotTPCFe!, PlotEffM
-export PlotProbDD, PlotProbDDe#, PlotACwt, PlotACsbwt, PlotTPCFwt
+export PlotProbDD, PlotProbDDe, PlotProbDDe!#, PlotACwt, PlotACsbwt, PlotTPCFwt
 export Autocorrelation_BySummation, PlotAC_BySummation
 # using PlotExp, plot_x
 
@@ -552,7 +552,7 @@ Calculates the analytical expectation value ⟨x²⟩ for the Harmonic Oscillato
 with mass m, frequency ω, lattice spacing a, and lattice points n_tau.
 """
 function Exp_x2e(n_tau, a, m, ω)
-    R = 1 + a^2*ω^2/2 - a*ω*sqrt(1+a^2*ω^2/4)
+    R = 1 + (a^2*ω^2)/2 - a*ω*sqrt(1+(a^2*ω^2)/4)
     return (1 + R^n_tau)/(1 - R^n_tau)/(2*m*ω)#*sqrt(1+(a*ω)^2/4))
 end
 
@@ -562,8 +562,8 @@ taking into consideration the discretization effects.
 with mass m, frequency ω, lattice spacing a, and lattice points n_tau.
 """
 function Exp_x2(n_tau, a, m, ω)
-    R = 1 + (a*ω)^2/2 - a*ω*sqrt(1+(a*ω)^2/4)
-    return (1+R^n_tau)/(1-R^n_tau)/(2*m*ω*sqrt(1+(a*ω)^2/4))
+    R = 1 + (a^2*ω^2)/2 - a*ω*sqrt(1+(a^2*ω^2)/4)
+    return (1+R^n_tau)/(1-R^n_tau)/(2*m*ω*sqrt(1+(a^2*ω^2)/4))
 end
 
 
@@ -958,13 +958,13 @@ end
 """
 Plots Probability Density Diagram from data file, array or matrix 
 """
-function PlotProbDD(file::AbstractString)
-    arr1 = GetColumn(2:Int((length(LastRowFromFile(file))-1)/4)+1,file)
+function PlotProbDD(filename::AbstractString)
+    arr1 = GetData(filename,4,1)
     arr1 = reshape(arr1,:)
     histogram(arr1,bins=[i for i=floor(minimum(arr1)*10)/10:0.1:(floor(maximum(arr1)*10)+1)/10],normed=true,xlabel="x",ylabel="|ψ₀|²",legend=false)#,weights=repeat([1/length(arr1)],length(arr1))
 end
-function PlotProbDD(file::AbstractString,incsize1)
-    arr1 = GetColumn(2:Int((length(LastRowFromFile(file))-1)/4)+1,file)
+function PlotProbDD(filename::AbstractString,incsize1)
+    arr1 = GetData(filename,4,1)
     arr1 = reshape(arr1,:)
     histogram(arr1,bins=[i for i=floor(minimum(arr1)*10)/10:incsize1:(floor(maximum(arr1)*10)+1)/10],normed=true,xlabel="x",ylabel="|ψ₀|²",legend=false)#,weights=repeat([1/length(arr1)],length(arr1))
 end
@@ -991,7 +991,11 @@ appends it to a plot
 """
 function PlotProbDDe(m,ω,ħ,range1)
     println("m = ",m,", ω = ",ω,", ħ = ",ħ)
-    plot!([x for x=-range1:0.01:range1],[((m*ω/(π*ħ))^(1/4)*exp(-m*ω*x^2/(2*ħ)))^2 for x=-range1:0.01:range1],linewidth=2)
+    plot([x for x=-range1:0.01:range1],[((m*ω/(π*ħ))^(1/4)*exp(-m*ω*x^2/(2*ħ)))^2 for x=-range1:0.01:range1],linewidth=2)
+end
+function PlotProbDDe!(plt,m,ω,ħ,range1)
+    println("m = ",m,", ω = ",ω,", ħ = ",ħ)
+    plot!(plt,[x for x=-range1:0.01:range1],[((m*ω/(π*ħ))^(1/4)*exp(-m*ω*x^2/(2*ħ)))^2 for x=-range1:0.01:range1],linewidth=2)
 end
 
 

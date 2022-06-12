@@ -162,10 +162,10 @@ function MetropolisSim(phys_param::AHO_M_param,sim_param::Sim_M_param,save_pre,f
     obsfname = "$(save_pre)$(filename)_obs.csv"
     touch(obsfname)
     
-    meanfname = "$(filename)_expfull.csv"
-    touch("$(save_pre)$(meanfname)")
-    expfname = "$(filename)_expect.csv"
-    touch("$(save_pre)$(expfname)")
+    # meanfname = "$(filename)_expfull.csv"
+    # touch("$(save_pre)$(meanfname)")
+    # expfname = "$(filename)_expect.csv"
+    # touch("$(save_pre)$(expfname)")
     # show(IOContext(stdout, :limit => true),"text/plain",Path); println();
     
     # Burn in, removing first n_burn values
@@ -183,10 +183,10 @@ function MetropolisSim(phys_param::AHO_M_param,sim_param::Sim_M_param,save_pre,f
             itt += 1
             writec123tofile(obsfname, Path, itt)   # curr1, curr2, curr3  // Append each itt
             # println("Measured ",itt)
-            sum1, sum2, sum3 = MeasureObs(n_tau, sum1, sum2, sum3, Path)
-            exp_x, exp_x2, exp_x0x1 = E_Vals(n_tau,sum1,sum2,sum3,itt)
-            writee123tofile(n_tau,save_pre,meanfname, exp_x,exp_x2,exp_x0x1, itt) # exp1, exp2, exp3  // Append each itt
-            writeeMean(save_pre,expfname,exp_x,exp_x2,exp_x0x1,itt)   # ⟨exp1⟩, ⟨exp2⟩, ⟨exp3⟩         // Append each itt
+            # sum1, sum2, sum3 = MeasureObs(n_tau, sum1, sum2, sum3, Path)
+            # exp_x, exp_x2, exp_x0x1 = E_Vals(n_tau,sum1,sum2,sum3,itt)
+            # writee123tofile(n_tau,save_pre,meanfname, exp_x,exp_x2,exp_x0x1, itt) # exp1, exp2, exp3  // Append each itt
+            # writeeMean(save_pre,expfname,exp_x,exp_x2,exp_x0x1,itt)   # ⟨exp1⟩, ⟨exp2⟩, ⟨exp3⟩         // Append each itt
         end
     end
     println("Mean acceptrate = ", Statistics.mean(Randlist))
