@@ -8,6 +8,7 @@ begin
     using StochasticDiffEq#, DifferentialEquations
     using LabelledArrays
     using BenchmarkTools
+    gaussianD = Normal(0,1) # Generator for gaussian distributed random numbers
     save_path = "results/"
     save_date = findDate() # Save date for plot names
     save_folder = "plots/" # Where to store plots
@@ -26,23 +27,19 @@ end
 
 
 
+#########################################
+# Langevin simulation of AHO
+#########################################
 
-# Old Langevin simulation on AHO
-
-
-# Generator for gaussian distributed random numbers
-gaussianD = Normal(0,1)
-
-# Define parameters
-# β=8.; n_tau=16; a=β/n_tau; m=1.; μ=1.; λ=0.;
-phys_p = AHO_L_param_old(8.,16,1.,1.,0.)
-dt=0.001; n_burn=3/dt; n_skip=3/dt;
-sim_p = Simulation_param_old(1000,n_burn,n_skip,dt)
-
-
+# Define physical parameters
+# n_tau=16; β=8.; a=β/n_tau; m=1.; μ=1.; λ=0.;
+phys_p = getAHO_L_param(16,8.,1.,1.,0.)
+# Define simulation parameters
+dt=0.001; n_burn=ceil(Int32,3/dt); n_skip=ceil(Int32,3/dt);
+sim_p = getSim_L_param(1000,n_burn,n_skip,dt)
 
 # Simulation giving configurations in matrix [N_total,N_tau]
-res1 = Langevin_old(phys_p,sim_p,gaussianD)
+res1 = Langevin_AHO(phys_p,sim_p,gaussianD)
 
 # Analysis
 PlotAC(res1,300)
@@ -57,8 +54,16 @@ savefig("$(save_folder)$(save_date)_L_old_TPCF.png")
 
 # Simulation appending configurations to file "$(savename)"
     # For a new, clean simulation, delete the existing file
+
+# Define physical parameters
+# β=8.; n_tau=16; a=β/n_tau; m=1.; μ=1.; λ=0.;
+phys_p = AHO_L_param(8.,16,1.,1.,0.)
+# Define simulation parameters
+dt=0.001; n_burn=3/dt; n_skip=3/dt;
+sim_p = Sim_L_param(1000,n_burn,n_skip,dt)
+
 save_name = "$(save_path)$(save_date)_L_old_simulation.csv"
-Langevin_old(phys_p,sim_p,gaussianD,save_name)
+Langevin_AHO(phys_p,sim_p,gaussianD,save_name)
 
 # Analysis
 PlotAC(save_name)   # save_name = name of file storing the results from simulation
@@ -74,9 +79,54 @@ savefig("$(save_folder)$(save_date)_L_old_TPCF.png")
 
 
 
-# res1 = Langevin_old(100,0.5,1,1,0,gaussianD)
 
-writec123tofile("plots/testing1.csv",[1.0001,2.,3.],5)
+
+
+
+
+
+#########################################
+# Complex Langevin simulation of Gaussian system
+#########################################
+
+
+# Define physical parameters
+μ = 1.;
+# μ = exp(1 *im*π/6)
+phys_p = getGaussian_CL_param(μ)
+# Define simulation parameters
+n_burn=3/dt; n_skip=3/dt; dt=0.001;
+sim_p = Sim_CL_param(1000,n_burn,n_skip,dt)
+
+# Simulation giving configurations in matrix [N_total,N_tau]
+res1 = CLangevin_Gauss(phys_p,sim_p,gaussianD)
+
+# Analysis
+PlotAC(res1[1]) # Autocorrelation of real part
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# writec123tofile("plots/testing1.csv",[1.0001,2.,3.],5)
 # 
 
 
@@ -101,49 +151,46 @@ writec123tofile("plots/testing1.csv",[1.0001,2.,3.],5)
 
 
 
-function Langevin(N,a,m,mu,la,gaussianD)
-    n_tau = 16
-    F = [20. for i = 1:n_tau]
-    F2 = [20. for i = 1:n_tau]
-    F3 = [20. for i = 1:n_tau]
-    Flist = Matrix{Float64}(undef,N+1,n_tau)
-    F2list = Matrix{Float64}(undef,N+1,n_tau)
-    F3list = Matrix{Float64}(undef,N+1,n_tau)
-    Flist[1,:] = F
-    F2list[1,:] = F2
-    F3list[1,:] = F3
-    dt = 0.001
-    timespan = (0.0,dt)
-    randoms1 = rand(gaussianD,N*n_tau)
-    for i=1:N
-        # println(F)
-        for ii = 1:n_tau
-            ϕ₋₁ = F[(ii-2+n_tau)%n_tau+1]; ϕ₊₁ = F[(ii)%n_tau+1]; ϕ0 = F[ii]
-            f(ϕ,t,p) = (m/a*(2ϕ-(ϕ₊₁+ϕ₋₁)) + m*mu*a*ϕ)*dt
-            prob = ODEProblem(f,ϕ0,timespan)
-            sol = solve(prob,Euler(),dt=dt,abstol=1e-8,reltol=1e-8)
-            sol3 = solve(prob,ImplicitEuler(),dt=dt,abstol=1e-8,reltol=1e-8)
-            # println(sol(0.01))
-            F[ii] -= sol(dt)*dt - sqrt(2*dt/a)*randoms1[n_tau*(i-1)+ii]
-            F2[ii] -= ActionDer(a,m,mu,la,F2[ii],F2[(ii-2+n_tau)%n_tau+1],F2[(ii)%n_tau+1])*dt - sqrt(2*dt/a)*randoms1[n_tau*(i-1)+ii]
-            F3[ii] -= sol3(dt)*dt - sqrt(2*dt/a)*randoms1[n_tau*(i-1)+ii]
-        end
-        Flist[i+1,:] = F
-        F2list[i+1,:] = F2
-        F3list[i+1,:] = F3
-    end
-    return Flist, F2list, F3list
-end
-res1, res2, res3 = Langevin(10,0.5,1,1,0,gaussianD);
+# function Langevin(N,a,m,mu,la,gaussianD)
+#     n_tau = 16
+#     F = [20. for i = 1:n_tau]
+#     F2 = [20. for i = 1:n_tau]
+#     F3 = [20. for i = 1:n_tau]
+#     Flist = Matrix{Float64}(undef,N+1,n_tau)
+#     F2list = Matrix{Float64}(undef,N+1,n_tau)
+#     F3list = Matrix{Float64}(undef,N+1,n_tau)
+#     Flist[1,:] = F
+#     F2list[1,:] = F2
+#     F3list[1,:] = F3
+#     dt = 0.001
+#     timespan = (0.0,dt)
+#     randoms1 = rand(gaussianD,N*n_tau)
+#     for i=1:N
+#         # println(F)
+#         for ii = 1:n_tau
+#             ϕ₋₁ = F[(ii-2+n_tau)%n_tau+1]; ϕ₊₁ = F[(ii)%n_tau+1]; ϕ0 = F[ii]
+#             f(ϕ,t,p) = (m/a*(2ϕ-(ϕ₊₁+ϕ₋₁)) + m*mu*a*ϕ)*dt
+#             prob = ODEProblem(f,ϕ0,timespan)
+#             sol = solve(prob,Euler(),dt=dt,abstol=1e-8,reltol=1e-8)
+#             sol3 = solve(prob,ImplicitEuler(),dt=dt,abstol=1e-8,reltol=1e-8)
+#             # println(sol(0.01))
+#             F[ii] -= sol(dt)*dt - sqrt(2*dt/a)*randoms1[n_tau*(i-1)+ii]
+#             F2[ii] -= ActionDer(a,m,mu,la,F2[ii],F2[(ii-2+n_tau)%n_tau+1],F2[(ii)%n_tau+1])*dt - sqrt(2*dt/a)*randoms1[n_tau*(i-1)+ii]
+#             F3[ii] -= sol3(dt)*dt - sqrt(2*dt/a)*randoms1[n_tau*(i-1)+ii]
+#         end
+#         Flist[i+1,:] = F
+#         F2list[i+1,:] = F2
+#         F3list[i+1,:] = F3
+#     end
+#     return Flist, F2list, F3list
+# end
+# res1, res2, res3 = Langevin(10,0.5,1,1,0,gaussianD);
 
-res1
-res2
-res3
-begin
-    plot(res1[:,1])
-    plot!(res2[:,1])
-    plot!(res3[:,1])
-end
+# begin
+#     plot(res1[:,1])
+#     plot!(res2[:,1])
+#     plot!(res3[:,1])
+# end
 
 
 
@@ -253,118 +300,7 @@ plot(x2[:,1],yerr=x2[:,2])
 
 
 
-#Computed by a Hubbard-Stratonovich transformation.
-# Instead of doing the HS transformation described in paper [2], 
-#   we just do the mentioned choice of complex μ (or λ).
-# Then the imaginary part drifts as:
-#       ϕᵢⁱ⁺¹ = ϕᵢⁱ - m μ ϕᵢⁱ dt
-# The real and complex parts are decoupled for just the HO, coupling comes from AHO, λ
-"""Complex and real part of the derivative of the action wrt. ϕ  
-"""
-function CActionDer(a,m,μ,λ,Fᵣ,Fᵢ)
-    z = m*μ*(Fᵣ+im*Fᵢ) + m*λ/6*(Fᵣ+im*Fᵢ)^3 #+ m/a^2*(2*F-(f₋₁+f₊₁))
-    # z = λ/12*(Fᵣ + im*Fᵢ) + im*λ/(12μ+2*im*λ*(Fᵣ+im*Fᵢ))
-    return real(z),imag(z)# m/a*(2*Fᵣ-(f₋₁+f₊₁)) + a*m*mu*Fᵣ# + a*m*la/6*Fᵣ^3
-end
 
-"""Calculated real and complex part of the weight term in Eq.(110)
-exp( - S_B(σ) )"""
-function Weight_func(μ,λ,Fᵣ,Fᵢ)
-    z = λ/24*(Fᵣ+im*Fᵢ)^2-0.5*log(λ/(12*μ+2*im*λ*(Fᵣ+im*Fᵢ)))
-    return real(exp(-z)), imag(exp(-z)) # e⁻ˢ
-end
-
-
-Weight_func(1,0.4,1,0)
-
-# Compute ⟨ϕ²⟩ = ⟨(ϕ_r + Im*ϕ_i)^2⟩ᵩ
-function CLangevin(N,a,m,mu,la,gaussianD,filename)
-    save_path = "results/"
-    intScheme = "fEuler"
-    # [x₁ʳ,x₂ʳ,...]
-    # [x₁ᶜ,x₂ᶜ,...]
-    F_r = 0.1 #[20. for i = 1:n_tau]     # n_tau global
-    F_i = 0. #[1. for i = 1:n_tau]
-    # println("The complex weight starts at: ",Weight_func(mu,la,F_r,F_i))
-
-    dt = 0.01
-    n_burn = 0#3/dt
-    n_skip = 0#3/dt
-
-    # Thermalize
-    for i=1:n_burn
-        for ii = 1:length(F_r)
-            if intScheme == "fEuler"
-                derAction = CActionDer(a, m, mu, la, F_r, F_i)
-                # Forward Euler: F_{n+1} = F_{n} + f(t_n,F_{n})
-                F_r -= derAction[1]*dt - sqrt(2*dt)*rand(gaussianD) # N_R = 1 => N_I = 0
-                F_i -= derAction[2]*dt
-                # F_r[ii] -= derAction[1]*dt - sqrt(2*dt)*rand(gaussianD)
-                # F_i[ii] -= derAction[2]*dt
-            else
-                # Backward Euler: F_{n+1} = F_{n} + f(t_{n+1},F_{n+1})
-                F_r0,F_i0 = copy(F_r),copy(F_i)
-                F_r, F_i = (F_r0,F_i0).+CActionDer(a, m, mu, la, F_r, F_i).*dt
-                # F_r, F_i = (1,2).+(1,2).*0.1 = (1.1, 2.2)
-                
-                # Instead of two variables, can go to one complex
-                # Matricies / vectors?
-                # Then f(F,t,F_0) = F_0 + CActionDer(a,m,mu,la,F)*dt = F_0 + m*μ*F + m*λ/6*F^3
-                    # + sqrt(2*dt)*rand(gaussianD)
-
-                # Then using the DifferentialEquations package:
-                # prob = ODEProblem(f,F_0,)
-                # sol = solve(prob,ImplicitEuler())
-                F_r += sqrt(2*dt)*rand(gaussianD)
-            end
-        end
-    end
-    show(F_r);println()
-
-    Flist_r = []
-    Flist_i = []
-    # push!(Flist_r,F_r)
-    # push!(Flist_i,F_i)
-    # WeightP_r = []
-    # WeightP_i = []
-    # WeightN_r = []
-    # WeightN_i = []
-    weight_c = 0# Weight_func(mu,la,F_r,F_i)
-    # push!(Weight_r,weight_c[1])
-    # push!(Weight_i,weight_c[2])
-    
-    # Simulate
-    t1 = @timed for i=1:N
-        # writec123tofile(path,filename,F_r,i)
-        push!(Flist_r,F_r)
-        push!(Flist_i,F_i)
-        writec123tofile(save_path,filename,F_r,i)
-        # weight_c = Weight_func(mu,la,F_r,F_i)
-        # if F_r > 0
-        #     push!(WeightP_r,weight_c[1])
-        #     push!(WeightP_i,weight_c[2])
-        # else
-        #     push!(WeightN_r,weight_c[1])
-        #     push!(WeightN_i,weight_c[2])
-        # end
-        for iii = 1:n_skip+1
-            for ii = 1:length(F_r)
-                # derAction = CActionDer(a,m,mu,la,F_r[ii],F_r[(ii-2+n_tau)%n_tau+1],F_r[(ii)%n_tau+1,F_c[ii],F_c[(ii-2+n_tau)%n_tau+1],F_c[(ii)%n_tau+1]])
-                # Possible for hashtable ii -> index in F_r / F_c
-                derAction = CActionDer(a, m, mu, la, F_r, F_i)
-                F_r -= derAction[1]*dt - sqrt(2*dt)*rand(gaussianD) # N_R = 1 => N_I = 0
-                F_i -= derAction[2]*dt
-                # F_r[ii] -= derAction[1]*dt - sqrt(2*dt)*rand(gaussianD)
-                # F_i[ii] -= derAction[2]*dt
-            end 
-        end
-        if i%2000==-1
-            println(i)
-        end
-    end
-    println("t: ",t1.time, " t2:", t1.gctime)
-    return Flist_r, Flist_i#WeightP_r, WeightP_i, WeightN_r, WeightN_i, 
-end
 
 ComplexSys = CLangevin(20000,0.5,1,1,0.4,gaussianD,"CL_2")
 incsize1= 0.1
