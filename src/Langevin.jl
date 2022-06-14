@@ -462,7 +462,7 @@ end
 # function CLangevinSchem(N,a,m,mu,la)
 #     n_tau = 16
 #     F0 = append!([20. for i = 1:n_tau],[0. for i = 1:n_tau])
-#     # Flist = Matrix{Float64}(undef,N+1,n_tau)
+#     # Flist = Matrix{Float64}(undef,N+1,2*n_tau)
 #     # Flist[1,:] = F0
 #     dt = 0.01
 #     timespan = (0.0,3*N)

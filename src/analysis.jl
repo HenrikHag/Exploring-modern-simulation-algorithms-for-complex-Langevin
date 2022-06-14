@@ -1,4 +1,4 @@
-using FFTW, Plots, Statistics, StatsBase
+using FFTW, Plots, Statistics, StatsBase, Gnuplot
 
 export Err1, Jackknife1
 export LastRowFromFile, GetColumn, GetData, GetTwoPointData, GetTP1data, GetExpXData, GetLastMean
@@ -741,7 +741,8 @@ end
 #     return tpcr
 # end
 """
-Plots the Two-Point Correlation Function from file or matrix of data
+Plots the Two-Point Correlation Function from file or matrix of data  
+If filename and saveToFile (strings) are passed, saves data to file for fitting
 """
 function PlotTPCF(matrix1::AbstractMatrix,logplot=true)
     tpcr = TPCF(transpose(matrix1))
@@ -800,13 +801,33 @@ function PlotTPCF(filename::AbstractString,Jackknife::Bool,logplot=true)
     else
         display(plot([0:length(tpcr[:,1])-1],tpcr[:,1],yerr=tpcr[:,2], label="⟨x₍ᵢ₊ⱼ₎xᵢ⟩ᵢ",xlabel="Δτ",ylabel="G(Δτ)"))
     end
-    # open("results/Twopointdata.csv","a") do file
-    #     for i = 1:length(tpcr[:,1])
-    #         write(file,string(i/2-1/2," ",tpcr[i,1]," ",tpcr[i,2],"\n"))
-    #     end
-    # end
+    # SaveToFitGnu(filename)
     return tpcr
 end
+function PlotTPCF(filename::AbstractString,saveToFile::AbstractString)
+    tpcr = TPCF(filename,Jackknife)
+    SaveToFitGnu(saveToFile,tpcr)
+end
+
+"""
+Save in format that can be used by Gnuplot for fit
+"""
+function SaveToFitGnu(saveToFile::AbstractString, tpcr)
+    open(saveToFile,"a") do file
+        for i = 1:length(tpcr[:,1])
+            write(file,string(0.5*(i-1)," ",tpcr[i,1]," ",tpcr[i,2],"\n"))
+        end
+    end
+    # file with "0.5*(i-1) tpcr[i,1] tpcr[i,2]\n" for each line
+    # @gp """plot "results/Twopointdata.csv" u 1:2:3 w e"""
+    # print("ok")
+    # @gp """f(x)=a*cosh(b*(x-4))"""
+    # @gp :- """fit f(x) "results/Twopointdata.csv" u 1:2:3 via a,b"""
+end
+# SaveToFitGnu("results/Twopointdata.csv")
+
+
+
 
 """
 Plots the expected TPCF for a system
@@ -1079,3 +1100,5 @@ function plot_x(meanf, n, number::Number)
     plot(matrixData, label=string("⟨x_$(number)",labl))
     return
 end
+
+
