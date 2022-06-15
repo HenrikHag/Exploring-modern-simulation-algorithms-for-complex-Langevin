@@ -35,7 +35,7 @@ measf = "results/22.06.12_M_longSim_1M_40skip_b32_obs.csv"
 
 # Plot for enough samples in results and Jackknife
 # PDD for β = 2 and 8
-
+PlotTPCF(measf,"results/$(save_date)_M_TPD.csv")
 
 
 #                                               #

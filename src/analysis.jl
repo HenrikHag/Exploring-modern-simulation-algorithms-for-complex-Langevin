@@ -805,7 +805,7 @@ function PlotTPCF(filename::AbstractString,Jackknife::Bool,logplot=true)
     return tpcr
 end
 function PlotTPCF(filename::AbstractString,saveToFile::AbstractString)
-    tpcr = TPCF(filename,Jackknife)
+    tpcr = TPCF(filename)
     SaveToFitGnu(saveToFile,tpcr)
 end
 

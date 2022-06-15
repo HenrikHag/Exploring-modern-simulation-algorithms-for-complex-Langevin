@@ -1051,3 +1051,38 @@ correlation matrix of the fit parameters:
                 a      b      
 a               1.000 
 b              -0.985  1.000 
+
+
+*******************************************************************************
+Wed Jun 15 10:44:52 2022
+
+
+FIT:    data read from "results/22.06.15_M_TPD.csv" u 1:2:3
+        format = x:z:s
+        #datapoints = 16
+function used for fitting: f(x)
+	f(x)=a*cosh(b*(x-4))
+fitted parameters initialized with current variable values
+
+iter      chisq       delta/lim  lambda   a             b            
+   0 4.0794416217e+08   0.00e+00  1.33e+04    1.000000e+00   1.000000e+00
+   8 1.3527679839e+00  -6.58e-03  1.33e-03    1.850580e-02   9.932177e-01
+
+After 8 iterations the fit converged.
+final sum of squares of residuals : 1.35277
+rel. change during last iteration : -6.57892e-08
+
+degrees of freedom    (FIT_NDF)                        : 14
+rms of residuals      (FIT_STDFIT) = sqrt(WSSR/ndf)    : 0.310848
+variance of residuals (reduced chisquare) = WSSR/ndf   : 0.0966263
+p-value of the Chisq distribution (FIT_P)              : 0.999993
+
+Final set of parameters            Asymptotic Standard Error
+=======================            ==========================
+a               = 0.0185058        +/- 8.909e-05    (0.4814%)
+b               = 0.993218         +/- 0.001366     (0.1375%)
+
+correlation matrix of the fit parameters:
+                a      b      
+a               1.000 
+b              -0.985  1.000 

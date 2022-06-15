@@ -1,16 +1,20 @@
 
-# begin
-#     # using Distributions
-# end
+using StochasticDiffEq, DifferentialEquations
 
+# AHO for Langevin simulations
 export AHO_L_param, getAHO_L_param, Sim_L_param, getSim_L_param, Langevin_AHO #, AHO_L_ActionDer
 
+# Gaussian system for Complex Langevin simulations
 export Gaussian_CL_param, getGaussian_CL_param, Sim_CL_param, getSim_CL_param, CLangevin_Gauss
 
+# AHO for Complex Langevin simulatons (μ complex)
 export AHO_CL_param, getAHO_CL_param, CLangevin_AHO #, AHO_CL_ActionDer
 
+export AHO_CL_ActionDer_Solver, RandScale_CL_Solver, CLangevin_AHO_Solver
 # export AHO_CL_param
 # export ActionCLDerSchem, RandScale, CLangevinSchem
+
+export GaussianModel_Solvers, GaussianModel_RandScale_Solvers, LangevinGaussSchem
 
 
 
@@ -178,20 +182,22 @@ end
 
 
 
-#                               #
-#  Complex Langevin functions   #
-#                               #
+
+#####################################
+#   Complex Langevin functions      #
+#####################################
 
 # For the Gaussian system: S = 1/2 μ ϕ²
 # Then the imaginary part drifts as:
 #       ϕᵢⁱ⁺¹ = ϕᵢⁱ - m μ ϕᵢⁱ dt
+
+###################### CL Simple System - Own Solver #####################
 """
 Physical parameters for Langevin simulation
 """
 struct Gaussian_CL_param
-    μ::Real
+    μ::Complex
 end
-
 
 """
 returns the gaussian system parameters for Langevin simulation
@@ -252,7 +258,7 @@ function CLangevin_Gauss(phys_param::Gaussian_CL_param,sim_param::Sim_CL_param,g
     for i=1:n_burn
         # derAction = CActionDer(a, m, mu, la, F_r, F_i)
         # Forward Euler: F_{n+1} = F_{n} + f(t_n,F_{n})
-        F_r = F_r - (mu_r*F_r + mu_i*F_i)*dt + sqrt(2*dt)*rand(gaussianD) # N_R = 1 => N_I = 0
+        F_r = F_r - (mu_r*F_r - mu_i*F_i)*dt + sqrt(2*dt)*rand(gaussianD) # N_R = 1 => N_I = 0
         F_i = F_i - (mu_i*F_r + mu_r*F_i)*dt
         # F_r[ii] -= derAction[1]*dt - sqrt(2*dt)*rand(gaussianD)
         # F_i[ii] -= derAction[2]*dt
@@ -286,9 +292,62 @@ end
 
 
 
+###################### CL Simple System - StochasticdiffEq. Solver #####################
+
+"""
+Want to show the method can compute the integral  
+`∫dx x^2 e^{-μ/2 x^2} / ∫dx e^{-μ/2 x^2}` where `μ ∈ C`  
+`= 1/μ`
+"""
+function GaussianModel_Solvers(du, u, params, t)
+    p = params
+    xR = @view u[1:div(end,2)]
+    xI = @view u[div(end,2)+1:end]
+    du[1:div(end,2)] .= -1 .* real.(p.μ .* (im .* xI .+ xR))
+    du[div(end,2)+1:end] .= -1 .* imag.(p.μ .* (im .* xI .+ xR))
+end
+
+function GaussianModel_RandScale_Solvers(du, u, param, t)
+    # a = param.p.a
+    du[1:div(end,2)] .= sqrt.(2.)
+end
 
 
+#### Complex plane solutions for μ complex
+"""
+Uses SDE solvers to compute the complex gaussian integral
+"""
+function LangevinGaussSchem(phys_param::Gaussian_CL_param,sim_param::Sim_CL_param,solver)
+    # Physical parameters
+    mu_r = real(phys_param.μ)
+    mu_i = imag(phys_param.μ)
+    # Simulation parameters
+    N = sim_param.N
+    n_burn = sim_param.n_burn
+    n_skip = sim_param.n_skip
+    dt = sim_param.dt
 
+    n_tau = 1#6
+    F0 = zeros(Float64,2*n_tau)
+    F0[1:n_tau] .= 20.
+    # F0 = append!([20. for i = 1:n_tau],[0. for i = 1:n_tau])
+    # Flist = Matrix{Float64}(undef,N+1,n_tau)
+    # Flist[1,:] = F0
+    dt = 0.01
+    timespan = (0.0,3*N)
+    # params = Lvector(p=struct w fields m μ λ)
+    # params = LVector(p=AHO_CL_Param(a,m,mu,la))
+    # Function to calculate change in action for whole path
+    sdeprob1 = SDEProblem(GaussianModel_Solvers,GaussianModel_RandScale_Solvers,F0,timespan,phys_param)
+    @time sol = solve(sdeprob1, solver, #progress=true, 
+                saveat=dt, save_start=false,
+                dtmax=1e-3, dt=dt, abstol=5e-1,reltol=5e-1,
+                adaptive=false)#,maxiters=10^8)
+    # ensemble_prob = EnsembleProblem(sdeprob1)
+    # @time sol = solve(ensemble_prob, Euler(), progress=true, saveat=0.01/dt, save_start=false,
+                # EnsembleThreads(), trajectories=1,
+                # dtmax=1e-3, dt=dt, abstol=5e-1,reltol=5e-1)#,maxiters=10^8)
+end
 
 
 
@@ -358,7 +417,7 @@ function AHO_CL_ActionDer(a,m,μ,λ,F_r,F_i,ii)
     n_tau = length(F_r)
     # return m/a*(2*F-(f₋₁+f₊₁)) + a*mu*F + la*F^3/(6*a^4)
     # m*(2*F-(f₋₁+f₊₁))/a^2 + mu*F + la*F^3/(6*a^3)
-    z_r = (m*(2*F_r[ii]-(F_r[(ii-2+n_tau)%n_tau+1]+F_r[(ii)%n_tau+1]))/a^2 + real(μ)*F_r[ii] + imag(μ)*F_i[ii] + λ*F_r^3/(6*a^3))
+    z_r = (m*(2*F_r[ii]-(F_r[(ii-2+n_tau)%n_tau+1]+F_r[(ii)%n_tau+1]))/a^2 + real(μ)*F_r[ii] - imag(μ)*F_i[ii] + λ*F_r^3/(6*a^3))
     z_i = (m*(2*F_i[ii]-(F_i[(ii-2+n_tau)%n_tau+1]+F_i[(ii)%n_tau+1]))/a^2 + real(μ)*F_i[ii] + imag(μ)*F_r[ii] + λ*F_i^3/(6*a^3))
     return z_r, z_i
 end
@@ -434,46 +493,46 @@ end
 ## Complex Langevin solver package ###
 ######################################
 
-# """
-# returns the array [dx_r...,dx_i...], the derivative of the action for StochasticDiffEq  
-# `ϕ = ∑ᵢ 1/2 a[m ((ϕᵢ₊₁-ϕᵢ)/a)² + μϕᵢ²]`  
-# `ϕⱼ = 1/2 a[m ((ϕⱼ₊₁-ϕⱼ)/a)² + ((ϕⱼ-ϕⱼ₋₁)/a)² + μϕⱼ²]`  
-# `∂ϕ/∂ϕⱼ = ∂/∂ϕⱼ a [m (ϕⱼ²-(ϕⱼ)(ϕⱼ₊₁+ϕⱼ₋₁))/2a² + μ/2 ϕⱼ²]`  
-# `       = [m (2ϕⱼ - ϕⱼ₊₁ - ϕⱼ₋₁)/a² + μϕⱼ]`
-# """
-# function ActionCLDerSchem(du, u, params, t)
-#     p = params.p
-#     xR = @view u[1:div(end,2)]
-#     xI = @view u[div(end,2)+1:end]
-#     Fr_diff_m1 = xR .- xR[vcat(end,1:end-1)]   # dx_j - dx_{j-1}
-#     Fr_diff_p1 = xR[vcat(2:end,1)] .- xR       # dx_{j+1} - dx_j
-#     Fi_diff_m1 = xI .- xI[vcat(end,1:end-1)]   # dx_j - dx_{j-1}
-#     Fi_diff_p1 = xI[vcat(2:end,1)] .- xI       # dx_{j+1} - dx_j
-#     # dx_j - dx_{j-1} - (dx_{j+1} - dx_j) = 2dx_j - dx_{j+1} - dx_{j-1}
-#     du[1:div(end,2)] .= (p.m .* real.(Fr_diff_p1 .- Fr_diff_m1 .+ im .* (Fi_diff_p1 .- Fi_diff_m1)) ./ p.a^2) .- real.(p.mu .* xR .+ im .* (p.mu .* xI))
-#     du[div(end,2)+1:end] .= (p.m .* imag.(im .* (Fi_diff_p1 .- Fi_diff_m1) .+ (Fr_diff_p1 .- Fr_diff_m1)) ./ p.a^2) .- imag.(p.mu .* xR .+ im .* (p.mu .* xI))
-# end
+"""
+returns the array [dx_r...,dx_i...], the derivative of the action for StochasticDiffEq  
+`ϕ = ∑ᵢ 1/2 a[m ((ϕᵢ₊₁-ϕᵢ)/a)² + μϕᵢ²]`  
+`ϕⱼ = 1/2 a[m ((ϕⱼ₊₁-ϕⱼ)/a)² + ((ϕⱼ-ϕⱼ₋₁)/a)² + μϕⱼ²]`  
+`∂ϕ/∂ϕⱼ = ∂/∂ϕⱼ a [m (ϕⱼ²-(ϕⱼ)(ϕⱼ₊₁+ϕⱼ₋₁))/2a² + μ/2 ϕⱼ²]`  
+`       = [m (2ϕⱼ - ϕⱼ₊₁ - ϕⱼ₋₁)/a² + μϕⱼ]`
+"""
+function AHO_CL_ActionDer_Solver(du, u, params, t)
+    p = params.p
+    xR = @view u[1:div(end,2)]
+    xI = @view u[div(end,2)+1:end]
+    Fr_diff_m1 = xR .- xR[vcat(end,1:end-1)]   # dx_j - dx_{j-1}
+    Fr_diff_p1 = xR[vcat(2:end,1)] .- xR       # dx_{j+1} - dx_j
+    Fi_diff_m1 = xI .- xI[vcat(end,1:end-1)]   # dx_j - dx_{j-1}
+    Fi_diff_p1 = xI[vcat(2:end,1)] .- xI       # dx_{j+1} - dx_j
+    # dx_j - dx_{j-1} - (dx_{j+1} - dx_j) = 2dx_j - dx_{j+1} - dx_{j-1}
+    du[1:div(end,2)] .= (p.m .* real.(Fr_diff_p1 .- Fr_diff_m1 .+ im .* (Fi_diff_p1 .- Fi_diff_m1)) ./ p.a^2) .- real.(p.mu .* xR .+ im .* (p.mu .* xI))
+    du[div(end,2)+1:end] .= (p.m .* imag.(im .* (Fi_diff_p1 .- Fi_diff_m1) .+ (Fr_diff_p1 .- Fr_diff_m1)) ./ p.a^2) .- imag.(p.mu .* xR .+ im .* (p.mu .* xI))
+end
 
-# function RandScale(du, u, param, t)
-#     a = param.p.a
-#     du[1:div(end,2)] .= sqrt.(2. ./ a)
-# end
+function RandScale_CL_Solver(du, u, param, t)
+    a = param.p.a
+    du[1:div(end,2)] .= sqrt.(2. ./ a)
+end
 
-# function CLangevinSchem(N,a,m,mu,la)
-#     n_tau = 16
-#     F0 = append!([20. for i = 1:n_tau],[0. for i = 1:n_tau])
-#     # Flist = Matrix{Float64}(undef,N+1,2*n_tau)
-#     # Flist[1,:] = F0
-#     dt = 0.01
-#     timespan = (0.0,3*N)
-#     # params = Lvector(p=struct w fields m μ λ)
-#     params = LVector(p=AHO_CL_Param(a,m,mu,la))
-#     # Function to calculate change in action for whole path
-#     sdeprob1 = SDEProblem(ActionCLDerSchem,RandScale,F0,timespan,params)
+function CLangevin_AHO_Solver(N,a,m,mu,la)
+    n_tau = 16
+    F0 = append!([20. for i = 1:n_tau],[0. for i = 1:n_tau])
+    # Flist = Matrix{Float64}(undef,N+1,2*n_tau)
+    # Flist[1,:] = F0
+    dt = 0.01
+    timespan = (0.0,3*N)
+    # params = Lvector(p=struct w fields m μ λ)
+    params = LVector(p=AHO_CL_Param(a,m,mu,la))
+    # Function to calculate change in action for whole path
+    sdeprob1 = SDEProblem(ActionCLDerSchem,RandScale,F0,timespan,params)
 
-#     @time sol = solve(sdeprob1, Euler(), progress=true, saveat=0.01/dt, save_start=false,
-#                 dtmax=1e-3, dt=dt, abstol=5e-2,reltol=5e-2)
-# end
+    @time sol = solve(sdeprob1, Euler(), progress=true, saveat=0.01/dt, save_start=false,
+                dtmax=1e-3, dt=dt, abstol=5e-2,reltol=5e-2)
+end
 
 
 

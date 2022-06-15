@@ -91,32 +91,87 @@ savefig("$(save_folder)$(save_date)_L_old_TPCF.png")
 
 
 # Define physical parameters
-μ = 1.;
-# μ = exp(1 *im*π/6)
+# μ = 1. + 0.2*im;
+μ = exp(1*im*π/4)
 phys_p = getGaussian_CL_param(μ)
 # Define simulation parameters
-n_burn=3/dt; n_skip=3/dt; dt=0.001;
+dt=0.001; n_burn=3/dt; n_skip=3/dt;
 sim_p = Sim_CL_param(1000,n_burn,n_skip,dt)
 
 # Simulation giving configurations in matrix [N_total,N_tau]
+a1 = ImplicitEM(theta = 1,symplectic=false)
+a2 = ImplicitEM(theta = 0.5,symplectic=false)
+a3 = EM()
+a4 = SKenCarp()
+a5 = DRI1()
+# = ImplicitEM(theta = 0,symplectic=false)
 res1 = CLangevin_Gauss(phys_p,sim_p,gaussianD)
 
-# Analysis
-PlotAC(res1[1]) # Autocorrelation of real part
+begin # Analysis
+    save_pre = "$(save_folder)$(save_date)_G_mu0.9"
+    PlotAC(res1[1]) # Autocorrelation of real part
+    savefig("$(save_pre)_AC.pdf")
+    savefig("$(save_pre)_AC.png")
+    
+    scatter(res1[1],res1[2],xlabel="ϕ_r",ylabel="ϕ_i") # Scatter real against complex
+    savefig("$(save_pre)_scatter.pdf")
+    savefig("$(save_pre)_scatter.png")
+    
+    PlotProbDD(res1[1]) # Show probability distribution
+    savefig("$(save_pre)_PDD.pdf")
+    savefig("$(save_pre)_PDD.png")
+    
+    Err1(res1[1].^2)
+end
+
+x3_1 = []
+begin
+scatter([imag(1/μ)],[real(1/μ)],xlabel="ϕ_r",ylabel="ϕ_i",label="")
+x3_2 = []
+x3_3 = []
+fig = 0
+for i in [a1,a2,a3,a4,a5]
+res1 = LangevinGaussSchem(phys_p,sim_p,i)
+begin
+    a = res1.u
+    a
+    x = Array{Complex}(undef,length(res1.u))
+    for i =1:length(res1.u)
+        x[i] = (res1.u[i][1] + im*res1.u[i][2])
+    end
+    # Err1(x)
+    # x2 = Array{Complex}(undef,length(res1.u))
+    x2 = x.^2
+    res = Err1(x2)
+    # y = imag(res[1])
+    # println(res)
+    if i == a1
+        fig = scatter!([imag.(res[1])],[real.(res[1])],yerr=[real.(res[2])],label="ImplicitEM(θ=1)")#xerr=[imag.(res[1])],
+    elseif i ==a2
+        fig = scatter!([imag.(res[1])],[real.(res[1])],yerr=[real.(res[2])],label="ImplicitEM(θ=0.5)")#xerr=[imag.(res[1])],
+    elseif i == a3
+        fig = scatter!([imag.(res[1])],[real.(res[1])],yerr=[real.(res[2])],label="EM(θ=0.5)")#xerr=[imag.(res[1])],
+    elseif i == a4
+        fig = scatter!([imag.(res[1])],[real.(res[1])],yerr=[real.(res[2])],label="SKenCarp")#xerr=[imag.(res[1])],
+    elseif i == a5
+        fig = scatter!([imag.(res[1])],[real.(res[1])],yerr=[real.(res[2])],label="DRI1")#xerr=[imag.(res[1])],
+    end
+    display(fig)
+end
+end
+end
+x3_1
+resulttime = [[4.056458],[3.959731],[0.982200]]
+
+println("ok")
+
+savefig(fig,"saved_plots/22.06.15_Solvers.pdf")
+savefig(fig,"saved_plots/22.06.15_Solvers.png")
 
 
-
-
-
-
-
-
-
-
-
-
-
-
+# 4.31
+# 3.96
+# Error
 
 
 
@@ -378,30 +433,10 @@ histogram(arr1,bins=[i for i=floor(minimum(arr1)*10)/10:incsize1:(floor(maximum(
 
 
 
-# mean(ComplexSys[5])
-# mean(ComplexSys[6])
-
-
-# for i = 1:length(ComplexSys)
-
-# end
 # mean(6/(6*(1+1im)+im*(0.4+1im)*ComplexSys))
 
-TwopointE = []
-n_tau = 16
-for i=0:n_tau-1
-    m=1
-    mu=1
-    dt = 0.5
-    R = 1+mu^2*dt^2/2-mu*dt*sqrt(1+mu^2*dt^2/4)
-    res= (R^i+R^(n_tau-i))/(1-R^n_tau)
-    res/=2*m*mu
-    push!(TwopointE,res)
-end
 
 
-Exp_x2e(16, 0.5, 1, 1)
-plot!(TwopointE)
 
     # Probability density diagram #
 PlotProbDD("results/CL_4.csv",0.1)
@@ -512,46 +547,9 @@ end
 # end
 
 
-function RandScaleGaussMod(du, u, param, t)
-    # a = param.p.a
-    du[1:div(end,2)] .= sqrt.(2.)
-end
 
-"""
-Want to show the method can compute the integral  
-`∫dx x^2 e^{-μ/2 x^2} / ∫dx e^{-μ/2 x^2}` where `μ ∈ C`  
-`= 1/μ`
-"""
-function GaussianModel(du, u, params, t)
-    p = params.p
-    xR = @view u[1:div(end,2)]
-    xI = @view u[div(end,2)+1:end]
-    du[1:div(end,2)] .= -1 .* real.(p.mu .* (im .* xI .+ xR))
-    du[div(end,2)+1:end] .= -1 .* imag.(p.mu .* (im .* xI .+ xR))
-end
 
-#### Complex plane solutions for μ complex
-function LangevinGaussSchem(N,a,m,mu,la,gaussianD)
-    n_tau = 16
-    F0 = zeros(Float64,2*n_tau)
-    F0[1:n_tau] .= 20.
-    # F0 = append!([20. for i = 1:n_tau],[0. for i = 1:n_tau])
-    # Flist = Matrix{Float64}(undef,N+1,n_tau)
-    # Flist[1,:] = F0
-    dt = 0.01
-    timespan = (0.0,3*N)
-    # params = Lvector(p=struct w fields m μ λ)
-    params = LVector(p=AHO_CL_Param(a,m,mu,la))
-    # Function to calculate change in action for whole path
-    sdeprob1 = SDEProblem(GaussianModel,RandScaleGaussMod,F0,timespan,params)
-    @time sol = solve(sdeprob1, ImplicitEM(theta = 1,symplectic=false,), progress=true, saveat=0.01/dt, save_start=false,
-                dtmax=1e-3, dt=dt, abstol=5e-1,reltol=5e-1,
-                adaptive=false)#,maxiters=10^8)
-    # ensemble_prob = EnsembleProblem(sdeprob1)
-    # @time sol = solve(ensemble_prob, Euler(), progress=true, saveat=0.01/dt, save_start=false,
-                # EnsembleThreads(), trajectories=1,
-                # dtmax=1e-3, dt=dt, abstol=5e-1,reltol=5e-1)#,maxiters=10^8)
-end
+
 
 fig1 = 0
 fig2 = 0
